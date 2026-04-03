@@ -60,7 +60,7 @@ function DetailRow({
           type={type}
           value={editValue ?? ""}
           onChange={(e) => onEditChange(e.target.value)}
-          className="w-48 text-right"
+          className="w-48"
         />
       ) : (
         <span className="font-medium">{value}</span>
