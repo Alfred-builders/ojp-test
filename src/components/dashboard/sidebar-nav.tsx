@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SquaresFour, Storefront, Coins, UsersThree, FolderOpen, Package } from "@phosphor-icons/react";
+import { SquaresFour, Diamond, Coins, UsersThree, FolderOpen, Package } from "@phosphor-icons/react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const stockItems = [
-  { title: "Bijoux", href: "/stock", icon: Storefront, disabled: false },
+  { title: "Bijoux", href: "/stock", icon: Diamond, disabled: false },
   { title: "Or Investissement", href: "/or-investissement", icon: Coins, disabled: true },
 ];
 
