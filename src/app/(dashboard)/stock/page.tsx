@@ -15,9 +15,7 @@ export default async function StockPage() {
 
   return (
     <PageWrapper title="Stock">
-      <div className="overflow-hidden rounded-lg border">
-        <StockTable data={bijoux} />
-      </div>
+      <StockTable data={bijoux} />
     </PageWrapper>
   );
 }

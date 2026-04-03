@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Gem } from "lucide-react";
+import { SquaresFour, Diamond } from "@phosphor-icons/react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/sidebar";
 
 const items = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Stock", href: "/stock", icon: Gem },
+  { title: "Dashboard", href: "/dashboard", icon: SquaresFour },
+  { title: "Stock", href: "/stock", icon: Diamond },
 ];
 
 export function SidebarNav() {
@@ -25,7 +25,7 @@ export function SidebarNav() {
             isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
             render={<Link href={item.href} />}
           >
-            <item.icon />
+            <item.icon size={18} weight="duotone" />
             <span>{item.title}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>

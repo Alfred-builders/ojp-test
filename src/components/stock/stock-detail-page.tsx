@@ -3,8 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Info as PhInfo, Ruler as PhRuler, CurrencyEur as PhCurrencyEur } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  Info as PhInfo,
+  Ruler as PhRuler,
+  CurrencyEur as PhCurrencyEur,
+  Diamond as PhDiamond,
+  PencilSimple,
+  FloppyDisk,
+} from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +30,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Header } from "@/components/dashboard/header";
-import { Gem } from "lucide-react";
 import type { BijouxStock } from "@/types/bijoux";
 
 const statutConfig: Record<
@@ -130,17 +136,19 @@ export function StockDetailPage({ bijou }: { bijou: BijouxStock }) {
         backAction={
           <Link href="/stock">
             <Button variant="ghost" size="icon-sm">
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft size={16} weight="duotone" />
             </Button>
           </Link>
         }
       >
         {editing ? (
           <Button size="sm" disabled={saving} onClick={handleSave}>
+            <FloppyDisk size={16} weight="duotone" />
             {saving ? "Sauvegarde..." : "Sauvegarder"}
           </Button>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <PencilSimple size={16} weight="duotone" />
             Modifier
           </Button>
         )}
@@ -158,7 +166,7 @@ export function StockDetailPage({ bijou }: { bijou: BijouxStock }) {
                 />
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <Gem className="h-16 w-16" />
+                  <PhDiamond size={64} weight="duotone" />
                   <span>Aucune photo</span>
                 </div>
               )}
@@ -194,22 +202,22 @@ export function StockDetailPage({ bijou }: { bijou: BijouxStock }) {
             </CardHeader>
             <CardContent>
               <DetailRow
-              label="Métal"
-              value={bijou.metaux ?? "—"}
-              editing={editing}
-              editContent={
-                <Select value={metaux} onValueChange={(val) => setMetaux(val ?? "")}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Sélectionner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Or">Or</SelectItem>
-                    <SelectItem value="Platine">Platine</SelectItem>
-                    <SelectItem value="Argent">Argent</SelectItem>
-                  </SelectContent>
-                </Select>
-              }
-            />
+                label="Métal"
+                value={bijou.metaux ?? "—"}
+                editing={editing}
+                editContent={
+                  <Select value={metaux} onValueChange={(val) => setMetaux(val ?? "")}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Or">Or</SelectItem>
+                      <SelectItem value="Platine">Platine</SelectItem>
+                      <SelectItem value="Argent">Argent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
               <DetailRow label="Qualité" value={bijou.qualite ?? "—"} editing={editing} editValue={qualite} onEditChange={setQualite} />
               <DetailRow label="Titrage" value={bijou.titrage ?? "—"} editing={editing} editValue={titrage} onEditChange={setTitrage} />
               <DetailRow label="Poids" value={bijou.poids !== null ? `${bijou.poids} g` : "—"} editing={editing} editValue={poids} onEditChange={setPoids} type="number" />

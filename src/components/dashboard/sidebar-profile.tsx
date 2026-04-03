@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, User } from "lucide-react";
+import { SignOut, UserCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -72,7 +72,7 @@ export function SidebarProfile({ profile, email }: SidebarProfileProps) {
             <DropdownMenuItem
               onSelect={() => router.push("/profile")}
             >
-              <User />
+              <UserCircle size={16} weight="duotone" />
               <span>Mon profil</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -80,7 +80,7 @@ export function SidebarProfile({ profile, email }: SidebarProfileProps) {
               variant="destructive"
               onSelect={handleLogout}
             >
-              <LogOut />
+              <SignOut size={16} weight="duotone" />
               <span>Se déconnecter</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

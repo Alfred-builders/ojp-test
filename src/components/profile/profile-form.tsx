@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera } from "lucide-react";
+import { Camera, FloppyDisk } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +74,6 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       data: { publicUrl },
     } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-    // Add cache buster to force refresh
     const newAvatarUrl = `${publicUrl}?t=${Date.now()}`;
 
     await supabase
@@ -134,7 +133,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               disabled={uploadingAvatar}
               className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
             >
-              <Camera className="h-5 w-5 text-white" />
+              <Camera size={20} weight="duotone" className="text-white" />
             </button>
             <input
               ref={fileInputRef}
@@ -205,6 +204,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={loading}>
+              <FloppyDisk size={16} weight="duotone" />
               {loading ? "Sauvegarde..." : "Sauvegarder"}
             </Button>
           </CardFooter>
