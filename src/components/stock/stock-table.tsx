@@ -68,12 +68,12 @@ function SortableHead({
         {children}
         {isActive ? (
           currentDir === "asc" ? (
-            <ArrowUp size={12} weight="duotone" />
+            <ArrowUp size={12} weight="fill" />
           ) : (
-            <ArrowDown size={12} weight="duotone" />
+            <ArrowDown size={12} weight="fill" />
           )
         ) : (
-          <ArrowsDownUp size={12} weight="duotone" className="opacity-40" />
+          <ArrowsDownUp size={12} weight="fill" className="opacity-40" />
         )}
       </button>
     </TableHead>
@@ -227,7 +227,7 @@ export function StockTable({ data }: { data: BijouxStock[] }) {
                           />
                         }
                       >
-                        <DotsThree size={16} weight="duotone" />
+                        <DotsThree size={16} weight="fill" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
