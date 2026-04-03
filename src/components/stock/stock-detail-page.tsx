@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardHeader,
@@ -44,6 +51,7 @@ function DetailRow({
   editValue,
   onEditChange,
   type = "text",
+  editContent,
 }: {
   label: string;
   value: React.ReactNode;
@@ -51,11 +59,14 @@ function DetailRow({
   editValue?: string;
   onEditChange?: (val: string) => void;
   type?: string;
+  editContent?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between py-2 border-b last:border-0">
       <span className="text-muted-foreground">{label}</span>
-      {editing && onEditChange ? (
+      {editing && editContent ? (
+        editContent
+      ) : editing && onEditChange ? (
         <Input
           type={type}
           value={editValue ?? ""}
@@ -182,7 +193,23 @@ export function StockDetailPage({ bijou }: { bijou: BijouxStock }) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <DetailRow label="Métal" value={bijou.metaux ?? "—"} editing={editing} editValue={metaux} onEditChange={setMetaux} />
+              <DetailRow
+              label="Métal"
+              value={bijou.metaux ?? "—"}
+              editing={editing}
+              editContent={
+                <Select value={metaux} onValueChange={(val) => setMetaux(val ?? "")}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Or">Or</SelectItem>
+                    <SelectItem value="Platine">Platine</SelectItem>
+                    <SelectItem value="Argent">Argent</SelectItem>
+                  </SelectContent>
+                </Select>
+              }
+            />
               <DetailRow label="Qualité" value={bijou.qualite ?? "—"} editing={editing} editValue={qualite} onEditChange={setQualite} />
               <DetailRow label="Titrage" value={bijou.titrage ?? "—"} editing={editing} editValue={titrage} onEditChange={setTitrage} />
               <DetailRow label="Poids" value={bijou.poids !== null ? `${bijou.poids} g` : "—"} editing={editing} editValue={poids} onEditChange={setPoids} type="number" />
