@@ -15,6 +15,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -187,7 +188,18 @@ export function StockDetailPage({ bijou }: { bijou: BijouxStock }) {
                 label="Statut"
                 value={<Badge variant="outline" className={statut.className}>{statut.label}</Badge>}
               />
-              <DetailRow label="Description" value={bijou.description ?? "—"} editing={editing} editValue={description} onEditChange={setDescription} />
+              <DetailRow
+                label="Description"
+                value={bijou.description ?? "—"}
+                editing={editing}
+                editContent={
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-48 min-h-[80px] resize-none"
+                  />
+                }
+              />
               <DetailRow label="Date de création" value={formatDate(bijou.date_creation)} />
             </CardContent>
           </Card>
