@@ -164,7 +164,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pb-6">
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
@@ -194,11 +194,13 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">
+                Email
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  — ne peut pas être modifié
+                </span>
+              </Label>
               <Input id="email" type="email" value={email} disabled />
-              <p className="text-xs text-muted-foreground">
-                L&apos;email ne peut pas être modifié.
-              </p>
             </div>
           </CardContent>
           <CardFooter>

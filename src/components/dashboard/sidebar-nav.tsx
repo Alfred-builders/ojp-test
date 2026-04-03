@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User } from "lucide-react";
+import { LayoutDashboard, Gem } from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -11,7 +11,7 @@ import {
 
 const items = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Profil", href: "/profile", icon: User },
+  { title: "Stock", href: "/stock", icon: Gem },
 ];
 
 export function SidebarNav() {
@@ -22,7 +22,7 @@ export function SidebarNav() {
       {items.map((item) => (
         <SidebarMenuItem key={item.href}>
           <SidebarMenuButton
-            isActive={pathname === item.href}
+            isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
             render={<Link href={item.href} />}
           >
             <item.icon />
