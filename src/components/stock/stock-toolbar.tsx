@@ -56,7 +56,7 @@ function FilterPopover({
                 {selected.label}
               </Badge>
             )}
-            <CaretDown size={12} weight="fill" className="ml-1 opacity-50" />
+            <CaretDown size={12} weight="regular" className="ml-1 opacity-50" />
           </Button>
         }
       />

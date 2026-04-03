@@ -137,7 +137,7 @@ export function StockDetailPage({ bijou }: { bijou: BijouxStock }) {
         backAction={
           <Link href="/stock">
             <Button variant="ghost" size="icon-sm">
-              <ArrowLeft size={16} weight="fill" />
+              <ArrowLeft size={16} weight="regular" />
             </Button>
           </Link>
         }
