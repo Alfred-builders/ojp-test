@@ -49,7 +49,7 @@ function FilterPopover({
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="bg-white dark:bg-card">
             {label}
             {selected && (
               <Badge variant="secondary" className="ml-1 px-1.5">
@@ -106,7 +106,7 @@ export function StockToolbar({
           placeholder="Rechercher..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="h-8 w-[200px] pl-8 text-sm"
+          className="h-8 w-[200px] pl-8 text-sm bg-white dark:bg-card"
         />
       </div>
       <FilterPopover
