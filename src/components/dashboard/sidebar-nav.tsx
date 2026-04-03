@@ -18,7 +18,7 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className="gap-2">
       {items.map((item) => (
         <SidebarMenuItem key={item.href}>
           <SidebarMenuButton
