@@ -40,6 +40,8 @@ const statutConfig: Record<
   en_stock: { label: "En stock", className: "bg-blue-500/10 text-blue-600 border-blue-600/30 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-400/30" },
   vendu: { label: "Vendu", className: "bg-destructive/10 text-destructive border-destructive/30 dark:bg-destructive/20" },
   reserve: { label: "Réservé", className: "bg-amber-500/10 text-amber-600 border-amber-600/30 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-400/30" },
+  en_depot_vente: { label: "En dépôt", className: "bg-cyan-500/10 text-cyan-600 border-cyan-600/30 dark:bg-cyan-500/20 dark:text-cyan-400 dark:border-cyan-400/30" },
+  rendu_client: { label: "Rendu client", className: "bg-gray-500/10 text-gray-600 border-gray-600/30 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-400/30" },
 };
 
 function formatCurrency(value: number | null) {
@@ -148,13 +150,13 @@ export function StockDetailPage({ bijou }: { bijou: BijouxStock }) {
             {saving ? "Sauvegarde..." : "Sauvegarder"}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+          <Button size="sm" onClick={() => setEditing(true)}>
             <PencilSimple size={16} weight="duotone" />
             Modifier
           </Button>
         )}
       </Header>
-      <div className="flex-1 p-6">
+      <div className="flex-1 overflow-y-auto p-6">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Photo */}
           <Card>

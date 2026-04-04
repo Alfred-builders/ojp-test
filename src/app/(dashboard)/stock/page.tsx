@@ -14,7 +14,7 @@ export default async function StockPage() {
   const bijoux = (data ?? []) as BijouxStock[];
 
   return (
-    <PageWrapper title="Stock">
+    <PageWrapper title="Stock" fullHeight>
       <StockTable data={bijoux} />
     </PageWrapper>
   );

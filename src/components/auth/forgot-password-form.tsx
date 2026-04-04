@@ -52,7 +52,7 @@ export function ForgotPasswordForm() {
           </CardDescription>
         </CardHeader>
         <CardFooter>
-          <Link href="/sign-in" className="text-sm text-primary hover:underline">
+          <Link href="/sign-in" className="text-sm text-link hover:underline">
             Retour à la connexion
           </Link>
         </CardFooter>
@@ -91,7 +91,7 @@ export function ForgotPasswordForm() {
           </Button>
           <Link
             href="/sign-in"
-            className="text-sm text-muted-foreground hover:text-primary"
+            className="text-sm text-muted-foreground hover:text-link"
           >
             Retour à la connexion
           </Link>

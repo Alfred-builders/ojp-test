@@ -73,7 +73,7 @@ export function SignInForm() {
               <Label htmlFor="password">Mot de passe</Label>
               <Link
                 href="/forgot-password"
-                className="text-sm text-muted-foreground hover:text-primary"
+                className="text-sm text-muted-foreground hover:text-link"
               >
                 Mot de passe oublié ?
               </Link>
@@ -93,7 +93,7 @@ export function SignInForm() {
           </Button>
           <p className="text-sm text-muted-foreground">
             Pas encore de compte ?{" "}
-            <Link href="/register" className="text-primary hover:underline">
+            <Link href="/register" className="text-link hover:underline">
               Créer un compte
             </Link>
           </p>

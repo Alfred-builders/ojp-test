@@ -3,7 +3,7 @@ export interface BijouxStock {
   nom: string;
   description: string | null;
   photo_url: string | null;
-  statut: "en_stock" | "vendu" | "reserve";
+  statut: "en_stock" | "vendu" | "reserve" | "en_depot_vente" | "rendu_client";
   poids: number | null;
   quantite: number | null;
   titrage: string | null;
@@ -11,6 +11,8 @@ export interface BijouxStock {
   qualite: "333" | "375" | "585" | "750" | "999" | null;
   prix_achat: number | null;
   prix_revente: number | null;
+  depot_vente_lot_id: string | null;
+  deposant_client_id: string | null;
   date_creation: string;
   created_at: string;
   updated_at: string;

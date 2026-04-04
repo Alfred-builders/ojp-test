@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { SignOut, UserCircle } from "@phosphor-icons/react";
+import { Gear, SignOut, UserCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -54,14 +54,14 @@ export function SidebarProfile({ profile, email }: SidebarProfileProps) {
               <SidebarMenuButton className="h-auto py-2 cursor-pointer" />
             }
           >
-            <Avatar className="h-8 w-8 shrink-0">
+            <Avatar className="h-8 w-8 shrink-0 group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6 transition-all">
               <AvatarImage
                 src={profile.avatar_url ?? undefined}
                 alt={fullName}
               />
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              <AvatarFallback className="text-xs group-data-[collapsible=icon]:text-[10px]">{initials}</AvatarFallback>
             </Avatar>
-            <div className="flex flex-col overflow-hidden">
+            <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden">
               <span className="truncate text-sm font-medium">{fullName}</span>
               <span className="truncate text-xs text-muted-foreground">
                 {email}
@@ -74,6 +74,12 @@ export function SidebarProfile({ profile, email }: SidebarProfileProps) {
             >
               <UserCircle size={16} weight="duotone" />
               <span>Mon profil</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => router.push("/parametres")}
+            >
+              <Gear size={16} weight="duotone" />
+              <span>Paramètres</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

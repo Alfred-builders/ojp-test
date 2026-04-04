@@ -13,8 +13,10 @@ import type { BijouxStock } from "@/types/bijoux";
 
 const statutOptions: { value: BijouxStock["statut"]; label: string }[] = [
   { value: "en_stock", label: "En stock" },
+  { value: "en_depot_vente", label: "En dépôt" },
   { value: "vendu", label: "Vendu" },
   { value: "reserve", label: "Réservé" },
+  { value: "rendu_client", label: "Rendu client" },
 ];
 
 const metauxOptions: { value: NonNullable<BijouxStock["metaux"]>; label: string }[] = [

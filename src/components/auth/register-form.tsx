@@ -62,7 +62,7 @@ export function RegisterForm() {
           </CardDescription>
         </CardHeader>
         <CardFooter>
-          <Link href="/sign-in" className="text-sm text-primary hover:underline">
+          <Link href="/sign-in" className="text-sm text-link hover:underline">
             Retour à la connexion
           </Link>
         </CardFooter>
@@ -133,7 +133,7 @@ export function RegisterForm() {
           </Button>
           <p className="text-sm text-muted-foreground">
             Déjà un compte ?{" "}
-            <Link href="/sign-in" className="text-primary hover:underline">
+            <Link href="/sign-in" className="text-link hover:underline">
               Se connecter
             </Link>
           </p>
