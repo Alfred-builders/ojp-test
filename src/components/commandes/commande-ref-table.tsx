@@ -334,8 +334,8 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
           </TableHeader>
           <TableBody>
             {paginatedData.length === 0 && processedLines.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className="py-16 text-center text-muted-foreground">
+              <TableRow className="hover:bg-transparent h-full">
+                <TableCell colSpan={6} className="text-center align-middle text-muted-foreground">
                   <Package size={32} weight="duotone" className="mx-auto mb-2 opacity-40" />
                   Aucune ligne en attente de commande.
                 </TableCell>

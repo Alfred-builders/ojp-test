@@ -258,8 +258,8 @@ export function BonsLivraisonList({ bonsLivraison, fonderies }: BonsLivraisonLis
           )}
         </div>
 
-        <div className="overflow-x-auto rounded-lg border bg-white dark:bg-card">
-          <Table className="min-w-[700px]">
+        <div className="flex-1 min-h-0 overflow-x-auto rounded-lg border bg-white dark:bg-card">
+          <Table className={paginatedData.length === 0 ? "min-w-[700px] h-full" : "min-w-[700px]"}>
             <TableHeader className="sticky top-0 z-10 bg-muted">
               <TableRow className="bg-transparent hover:bg-transparent">
                 <TableHead className="pl-4">Désignation</TableHead>
@@ -277,8 +277,8 @@ export function BonsLivraisonList({ bonsLivraison, fonderies }: BonsLivraisonLis
                   </TableCell>
                 </TableRow>
               ) : paginatedData.length === 0 ? (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                <TableRow className="hover:bg-transparent h-full">
+                  <TableCell colSpan={5} className="text-center align-middle text-muted-foreground">
                     <Diamond size={32} weight="duotone" className="mx-auto mb-2 opacity-40" />
                     Aucun article à envoyer en fonderie.
                   </TableCell>

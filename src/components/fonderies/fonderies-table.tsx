@@ -170,8 +170,8 @@ export function FonderiesTable({ fonderies, totalItems, page, pageSize }: Fonder
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto rounded-lg border bg-white dark:bg-card">
-        <Table>
+      <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
+        <Table className={filtered.length === 0 ? "h-full" : ""}>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow className="bg-transparent hover:bg-transparent">
               <SortableHead label="Nom" sortKey="nom" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
@@ -183,8 +183,8 @@ export function FonderiesTable({ fonderies, totalItems, page, pageSize }: Fonder
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+              <TableRow className="hover:bg-transparent h-full">
+                <TableCell colSpan={5} className="text-center align-middle text-muted-foreground">
                   <Factory size={32} weight="duotone" className="mx-auto mb-2 opacity-40" />
                   Aucune fonderie trouvée.
                 </TableCell>
