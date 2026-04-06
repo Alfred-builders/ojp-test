@@ -245,7 +245,7 @@ export function StockDetailPage({
           )
         )}
       </Header>
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
         <div className="space-y-6">
           {/* Lifecycle stepper */}
           <StockLifecycleStepper statut={bijou.statut} />

@@ -209,7 +209,7 @@ export function ClientDetailPage({
           </Button>
         )}
       </Header>
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto overflow-x-hidden">
         <div className="grid gap-6 md:grid-cols-3">
           {/* Informations personnelles */}
           <Card>

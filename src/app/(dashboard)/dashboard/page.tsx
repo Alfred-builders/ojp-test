@@ -41,7 +41,7 @@ export default async function DashboardPage() {
 
   return (
     <PageWrapper title="Dashboard" fullHeight>
-      <div className="flex h-full flex-col gap-4 overflow-y-auto">
+      <div className="flex h-full flex-col gap-4 overflow-y-auto overflow-x-hidden">
         <div className="flex shrink-0 items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">
             Bonjour {firstName} !
