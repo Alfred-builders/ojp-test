@@ -41,7 +41,7 @@ interface SidebarNavProps {
 
 export function SidebarNav({ role }: SidebarNavProps) {
   const pathname = usePathname();
-  const isOwner = role === "proprietaire";
+  const isOwner = role === "proprietaire" || role === "super_admin";
 
   return (
     <>

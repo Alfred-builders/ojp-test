@@ -19,7 +19,7 @@ export default async function UtilisateursPage() {
     .eq("id", user.id)
     .single();
 
-  if (callerProfile?.role !== "proprietaire") {
+  if (callerProfile?.role !== "proprietaire" && callerProfile?.role !== "super_admin") {
     redirect("/dashboard");
   }
 
@@ -33,6 +33,7 @@ export default async function UtilisateursPage() {
       <UsersManagementPage
         users={(profiles ?? []) as UserProfile[]}
         currentUserId={user.id}
+        currentUserRole={callerProfile?.role as import("@/types/auth").UserRole}
       />
     </PageWrapper>
   );

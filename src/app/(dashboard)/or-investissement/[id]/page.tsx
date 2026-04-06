@@ -28,5 +28,5 @@ export default async function OrInvestissementDetailRoute({
 
   if (!data) return notFound();
 
-  return <OrInvestissementDetailPage item={data as OrInvestissement} canEdit={role === "proprietaire"} />;
+  return <OrInvestissementDetailPage item={data as OrInvestissement} canEdit={role === "proprietaire" || role === "super_admin"} />;
 }

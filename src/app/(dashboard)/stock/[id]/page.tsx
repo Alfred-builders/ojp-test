@@ -184,7 +184,7 @@ export default async function StockDetailRoute({
   return (
     <StockDetailPage
       bijou={bijou}
-      canEdit={role === "proprietaire"}
+      canEdit={role === "proprietaire" || role === "super_admin"}
       origin={origin}
       sale={sale}
       reparations={reparations}

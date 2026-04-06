@@ -36,7 +36,7 @@ export function LotSummaryCard({
   lotType = "rachat",
   role = "proprietaire",
 }: LotSummaryCardProps) {
-  const isOwner = role === "proprietaire";
+  const isOwner = role === "proprietaire" || role === "super_admin";
   if (lotType === "depot_vente") {
     const commission = totalPrixRevente - totalPrixAchat;
     return (

@@ -89,7 +89,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Block vendeur from owner-only routes
-    if (profile?.role !== "proprietaire") {
+    if (profile?.role !== "proprietaire" && profile?.role !== "super_admin") {
       const isOwnerRoute =
         OWNER_ONLY_ROUTES.some((r) => pathname === r) ||
         OWNER_ONLY_PREFIXES.some((r) => pathname.startsWith(r));

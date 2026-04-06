@@ -39,7 +39,7 @@ export default async function OrInvestissementPage({
 
   return (
     <PageWrapper title="Or Investissement" fullHeight>
-      <OrInvestissementTable data={items} canEdit={role === "proprietaire"} totalItems={count ?? 0} page={page} pageSize={size} />
+      <OrInvestissementTable data={items} canEdit={role === "proprietaire" || role === "super_admin"} totalItems={count ?? 0} page={page} pageSize={size} />
     </PageWrapper>
   );
 }

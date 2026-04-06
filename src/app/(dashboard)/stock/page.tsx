@@ -79,7 +79,7 @@ export default async function StockPage({
 
   return (
     <PageWrapper title="Bijoux" fullHeight>
-      <StockTable data={bijoux} canEdit={role === "proprietaire"} totalItems={count ?? 0} page={page} pageSize={size} />
+      <StockTable data={bijoux} canEdit={role === "proprietaire" || role === "super_admin"} totalItems={count ?? 0} page={page} pageSize={size} />
     </PageWrapper>
   );
 }

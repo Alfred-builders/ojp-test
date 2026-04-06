@@ -36,7 +36,7 @@ export async function DELETE(
       .eq("id", user.id)
       .single();
 
-    if (callerProfile?.role !== "proprietaire") {
+    if (callerProfile?.role !== "proprietaire" && callerProfile?.role !== "super_admin") {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
@@ -47,9 +47,16 @@ export async function DELETE(
       .eq("id", id)
       .single();
 
-    if (targetProfile?.role === "proprietaire") {
+    if (targetProfile?.role === "super_admin") {
       return NextResponse.json(
-        { error: "Impossible de supprimer un propriétaire" },
+        { error: "Impossible de supprimer un super admin" },
+        { status: 400 }
+      );
+    }
+
+    if (targetProfile?.role === "proprietaire" && callerProfile?.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "Seul un super admin peut supprimer un propriétaire" },
         { status: 400 }
       );
     }

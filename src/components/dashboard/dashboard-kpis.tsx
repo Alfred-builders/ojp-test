@@ -58,7 +58,7 @@ const KPIS = [
 const OWNER_ONLY_KPIS = new Set(["ca", "marge"]);
 
 export function DashboardKpis({ data, role = "proprietaire" }: { data: KpiData; role?: UserRole }) {
-  const visibleKpis = role === "proprietaire" ? KPIS : KPIS.filter((k) => !OWNER_ONLY_KPIS.has(k.key));
+  const visibleKpis = role === "proprietaire" || role === "super_admin" ? KPIS : KPIS.filter((k) => !OWNER_ONLY_KPIS.has(k.key));
 
   return (
     <div className={`grid grid-cols-2 ${visibleKpis.length <= 2 ? "xl:grid-cols-2" : "xl:grid-cols-4"} gap-4`}>

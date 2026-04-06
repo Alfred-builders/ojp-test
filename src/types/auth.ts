@@ -1,4 +1,4 @@
-export type UserRole = "proprietaire" | "vendeur";
+export type UserRole = "super_admin" | "proprietaire" | "vendeur";
 export type UserStatus = "pending" | "active" | "inactive";
 
 export interface UserProfile {

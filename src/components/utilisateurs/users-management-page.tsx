@@ -7,14 +7,13 @@ import {
   ArrowUp,
   ArrowDown,
   DotsThree,
-  CheckCircle,
-  XCircle,
   Crown,
   Storefront,
   Trash,
-  HourglassSimple,
+  ShieldStar,
+  UserSwitch,
 } from "@phosphor-icons/react";
-import type { UserProfile } from "@/types/auth";
+import type { UserProfile, UserRole } from "@/types/auth";
 import {
   Table,
   TableHeader,
@@ -49,6 +48,27 @@ import { formatDate } from "@/lib/format";
 
 type SortKey = "name" | "email" | "role" | "created_at";
 type SortDir = "asc" | "desc";
+
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  active: {
+    label: "Actif",
+    className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30",
+  },
+  pending: {
+    label: "En attente",
+    className: "bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/30",
+  },
+  inactive: {
+    label: "Inactif",
+    className: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30",
+  },
+};
+
+const ROLE_LABEL: Record<UserRole, string> = {
+  super_admin: "Super Admin",
+  proprietaire: "Propriétaire",
+  vendeur: "Vendeur",
+};
 
 function SortableHead({
   children,
@@ -90,11 +110,13 @@ function SortableHead({
 interface UsersManagementPageProps {
   users: UserProfile[];
   currentUserId: string;
+  currentUserRole: UserRole;
 }
 
 export function UsersManagementPage({
   users,
   currentUserId,
+  currentUserRole,
 }: UsersManagementPageProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -105,6 +127,8 @@ export function UsersManagementPage({
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const isSuperAdmin = currentUserRole === "super_admin";
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -162,7 +186,28 @@ export function UsersManagementPage({
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
+        toast.success(newStatus === "active" ? "Utilisateur activé" : "Utilisateur désactivé");
         router.refresh();
+      }
+    } finally {
+      setToggling(null);
+    }
+  }
+
+  async function handleChangeRole(userId: string, newRole: UserRole) {
+    setToggling(userId);
+    try {
+      const res = await fetch(`/api/users/${userId}/toggle-active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) {
+        toast.success(`Rôle modifié en ${ROLE_LABEL[newRole]}`);
+        router.refresh();
+      } else {
+        const data = await res.json();
+        toast.error(data.error ?? "Erreur lors du changement de rôle");
       }
     } finally {
       setToggling(null);
@@ -177,7 +222,7 @@ export function UsersManagementPage({
         method: "DELETE",
       });
       if (res.ok) {
-        toast.success("Utilisateur supprime");
+        toast.success("Utilisateur supprimé");
         router.refresh();
       } else {
         const data = await res.json();
@@ -189,6 +234,20 @@ export function UsersManagementPage({
     }
   }
 
+  function canManageUser(u: UserProfile) {
+    if (u.id === currentUserId) return false;
+    if (isSuperAdmin) return true;
+    // proprietaire can manage vendeur only
+    if (currentUserRole === "proprietaire" && u.role === "vendeur") return true;
+    return false;
+  }
+
+  function canChangeRole(u: UserProfile) {
+    if (u.id === currentUserId) return false;
+    if (isSuperAdmin && u.role !== "super_admin") return true;
+    return false;
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
       {/* Toolbar */}
@@ -197,7 +256,7 @@ export function UsersManagementPage({
           placeholder="Rechercher un utilisateur..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setCurrentPage(0); }}
-          className="max-w-sm bg-white dark:bg-card"
+          className="max-w-sm"
         />
       </div>
 
@@ -233,6 +292,7 @@ export function UsersManagementPage({
               paginatedData.map((u) => {
                 const isCurrentUser = u.id === currentUserId;
                 const fullName = getName(u);
+                const statusBadge = STATUS_BADGE[u.status] ?? STATUS_BADGE.active;
 
                 return (
                   <TableRow key={u.id} className="bg-white dark:bg-card">
@@ -251,49 +311,36 @@ export function UsersManagementPage({
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={u.role === "proprietaire" ? "default" : "secondary"}
+                        variant={u.role === "super_admin" ? "default" : u.role === "proprietaire" ? "default" : "secondary"}
                         className="gap-1"
                       >
-                        {u.role === "proprietaire" ? (
+                        {u.role === "super_admin" ? (
+                          <ShieldStar size={12} weight="duotone" />
+                        ) : u.role === "proprietaire" ? (
                           <Crown size={12} weight="duotone" />
                         ) : (
                           <Storefront size={12} weight="duotone" />
                         )}
-                        {u.role === "proprietaire" ? "Propriétaire" : "Vendeur"}
+                        {ROLE_LABEL[u.role]}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {u.status === "active" && (
-                        <span className="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle size={14} weight="duotone" />
-                          Actif
-                        </span>
-                      )}
-                      {u.status === "pending" && (
-                        <span className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
-                          <HourglassSimple size={14} weight="duotone" />
-                          En attente
-                        </span>
-                      )}
-                      {u.status === "inactive" && (
-                        <span className="inline-flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
-                          <XCircle size={14} weight="duotone" />
-                          Inactif
-                        </span>
-                      )}
+                      <Badge variant="secondary" className={statusBadge.className}>
+                        {statusBadge.label}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDate(u.created_at)}
                     </TableCell>
                     <TableCell className="pr-4">
-                      {!isCurrentUser && u.role !== "proprietaire" && (
+                      {canManageUser(u) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             render={
                               <Button variant="ghost" size="icon-xs" aria-label="Actions" />
                             }
                           >
-                            <DotsThree size={16} weight="regular" />
+                            <DotsThree size={16} weight="bold" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {u.status !== "active" && (
@@ -301,19 +348,39 @@ export function UsersManagementPage({
                                 disabled={toggling === u.id}
                                 onClick={() => handleSetStatus(u.id, "active")}
                               >
-                                <CheckCircle size={16} weight="duotone" />
                                 Activer
                               </DropdownMenuItem>
                             )}
                             {u.status === "active" && (
                               <DropdownMenuItem
-                                variant="destructive"
                                 disabled={toggling === u.id}
                                 onClick={() => handleSetStatus(u.id, "inactive")}
                               >
-                                <XCircle size={16} weight="duotone" />
-                                Desactiver
+                                Désactiver
                               </DropdownMenuItem>
+                            )}
+                            {canChangeRole(u) && (
+                              <>
+                                <DropdownMenuSeparator />
+                                {u.role !== "proprietaire" && (
+                                  <DropdownMenuItem
+                                    disabled={toggling === u.id}
+                                    onClick={() => handleChangeRole(u.id, "proprietaire")}
+                                  >
+                                    <UserSwitch size={16} weight="duotone" />
+                                    Passer Propriétaire
+                                  </DropdownMenuItem>
+                                )}
+                                {u.role !== "vendeur" && (
+                                  <DropdownMenuItem
+                                    disabled={toggling === u.id}
+                                    onClick={() => handleChangeRole(u.id, "vendeur")}
+                                  >
+                                    <UserSwitch size={16} weight="duotone" />
+                                    Passer Vendeur
+                                  </DropdownMenuItem>
+                                )}
+                              </>
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -350,13 +417,13 @@ export function UsersManagementPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer cet utilisateur ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Vous etes sur le point de supprimer{" "}
+              Vous êtes sur le point de supprimer{" "}
               <span className="font-medium text-foreground">
                 {deleteTarget
                   ? [deleteTarget.first_name, deleteTarget.last_name].filter(Boolean).join(" ") || deleteTarget.email
                   : ""}
               </span>
-              . Cette action est irreversible. Le compte et toutes ses donnees seront definitivement supprimes.
+              . Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

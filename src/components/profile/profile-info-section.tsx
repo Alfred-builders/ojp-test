@@ -149,7 +149,7 @@ export function ProfileInfoSection({ profile, email }: ProfileInfoSectionProps) 
             <CardTitle>{fullName}</CardTitle>
             <CardDescription>{email}</CardDescription>
             <Badge variant="secondary" className="mt-1">
-              {profile.role === "proprietaire" ? (
+              {profile.role === "proprietaire" || role === "super_admin" ? (
                 <>
                   <Crown size={12} weight="duotone" className="mr-1" />
                   Proprietaire

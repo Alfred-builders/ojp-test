@@ -30,7 +30,7 @@ interface SidebarProfileProps {
 }
 
 export function SidebarProfile({ profile, email, role }: SidebarProfileProps) {
-  const isOwner = role === "proprietaire";
+  const isOwner = role === "proprietaire" || role === "super_admin";
   const router = useRouter();
 
   const fullName =
