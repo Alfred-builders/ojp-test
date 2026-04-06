@@ -145,7 +145,7 @@ export function FonderieDetailPage({ fonderie, bonsCommande = [] }: { fonderie: 
         )}
       </Header>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Informations */}
           <Card>

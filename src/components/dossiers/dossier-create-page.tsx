@@ -121,7 +121,7 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
           {saving ? "Création..." : "Créer"}
         </Button>
       </Header>
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
+      <div className="flex-1 p-6">
         {errors._form && (
           <p className="text-sm text-destructive mb-4">{errors._form}</p>
         )}

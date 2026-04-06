@@ -68,7 +68,7 @@ export function ProfileForm({ profile, email, preferences }: ProfileFormProps) {
       </nav>
 
       {/* Contenu */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
+      <div className="flex-1 p-6">
         <div className="mx-auto max-w-2xl">
           {activeSection === "info" && (
             <ProfileInfoSection profile={profile} email={email} />

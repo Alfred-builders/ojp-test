@@ -211,7 +211,7 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
         </div>
       </Header>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6">
         {/* Acompte 48h deadline alert */}
         {lot.acompte_paye && !lot.solde_paye && lot.date_limite_solde && status === "en_cours" && (() => {
           const deadline = new Date(lot.date_limite_solde);

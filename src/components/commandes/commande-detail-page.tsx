@@ -256,7 +256,7 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
         <VenteStatusBadge status={lot.status as VenteStatus} />
       </Header>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6">
         {/* Stepper */}
         {totalOrInvest > 0 && (
           <CommandeStepper lot={lot} lignes={orInvestLignes} allFulfilled={allFulfilled} />

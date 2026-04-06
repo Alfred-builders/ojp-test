@@ -111,7 +111,7 @@ export function EmailTemplatesTab({ templates: initialTemplates }: EmailTemplate
       </div>
 
       {/* Contenu scrollable */}
-      <div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pl-6">
+      <div ref={scrollRef} className="min-w-0 flex-1 scroll-smooth pl-6">
         <div className="pb-32 space-y-8">
           {templates.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
