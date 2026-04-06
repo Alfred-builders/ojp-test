@@ -1,5 +1,5 @@
 import { render } from "@react-email/components";
-import { resend } from "./resend";
+import { getResend } from "./resend";
 import { replaceVariables, buildVariablesMap, TEST_VARIABLES } from "./variables";
 import { EmailWrapper } from "./wrapper";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -156,7 +156,7 @@ export async function sendNotification(
     const company = companyRow?.value as CompanySettings | undefined;
     const fromEmail = company?.email_expediteur || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
     const fromName = company?.nom_expediteur || "Or au Juste Prix";
-    const { data: sendData, error: sendError } = await resend.emails.send({
+    const { data: sendData, error: sendError } = await getResend().emails.send({
       from: `${fromName} <${fromEmail}>`,
       to: recipientEmail,
       subject,
