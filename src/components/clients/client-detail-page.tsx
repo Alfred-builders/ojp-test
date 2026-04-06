@@ -11,6 +11,7 @@ import {
   Info as PhInfo,
   IdentificationCard as PhIdCard,
   FolderOpen as PhFolderOpen,
+  Plus,
   NotePencil as PhNotePencil,
   PencilSimple,
   FloppyDisk,
@@ -19,6 +20,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -295,10 +297,34 @@ export function ClientDetailPage({
 
           {/* Dossiers du client */}
           <div className="md:col-span-3 space-y-3">
-            <h3 className="flex items-center gap-2 font-semibold">
-              <PhFolderOpen size={20} weight="duotone" />
-              Dossiers
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <PhFolderOpen size={20} weight="duotone" />
+                Dossiers
+              </h3>
+              {identityDocuments.length > 0 ? (
+                <Link href={`/dossiers/new?client_id=${client.id}`}>
+                  <Button variant="secondary" size="sm">
+                    <Plus size={14} weight="bold" />
+                    Créer un dossier
+                  </Button>
+                </Link>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={<span tabIndex={0} className="inline-flex cursor-not-allowed" />}
+                  >
+                    <Button variant="secondary" size="sm" disabled>
+                      <Plus size={14} weight="bold" />
+                      Créer un dossier
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Ajoutez une pièce d&apos;identité pour créer un dossier
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
             {dossiers.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Aucun dossier pour ce client.

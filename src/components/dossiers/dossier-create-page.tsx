@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   FolderOpen as PhFolderOpen,
@@ -52,10 +52,13 @@ function FormField({
 
 export function DossierCreatePage({ validClients }: { validClients: Client[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [clientId, setClientId] = useState("");
+  const paramClientId = searchParams.get("client_id") ?? "";
+  const isParamValid = validClients.some((c) => c.id === paramClientId);
+  const [clientId, setClientId] = useState(isParamValid ? paramClientId : "");
   const [notes, setNotes] = useState("");
 
   const selectedClient = validClients.find((c) => c.id === clientId) ?? null;
@@ -162,11 +165,9 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
                 </p>
                 <Select value={clientId} onValueChange={(val) => setClientId(val ?? "")}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un client">
-                      {selectedClient
-                        ? `${selectedClient.civility === "M" ? "M." : "Mme"} ${selectedClient.first_name} ${selectedClient.last_name}`
-                        : undefined}
-                    </SelectValue>
+                    {selectedClient
+                      ? <span className="truncate">{`${selectedClient.civility === "M" ? "M." : "Mme"} ${selectedClient.first_name} ${selectedClient.last_name}`}</span>
+                      : <SelectValue placeholder="Sélectionner un client" />}
                   </SelectTrigger>
                   <SelectContent>
                     {validClients.length === 0 ? (
