@@ -173,7 +173,7 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
               <Label htmlFor="password">Mot de passe temporaire</Label>
               <Input
                 id="password"
-                type="text"
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min. 6 caractères"
