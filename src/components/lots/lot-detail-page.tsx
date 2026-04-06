@@ -477,7 +477,7 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         </div>
       </Header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Lot info */}
           <Card>

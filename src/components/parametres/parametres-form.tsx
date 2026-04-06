@@ -182,7 +182,7 @@ export function ParametresForm({ parametres, emailTemplates, settings }: Paramet
       </nav>
 
       {/* Contenu */}
-      <div className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
+      <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6">
         <div className="pb-8">
           {/* En-tête de section avec bouton de sauvegarde global */}
           <div className="mx-auto max-w-3xl mb-6 flex items-start justify-between gap-4">

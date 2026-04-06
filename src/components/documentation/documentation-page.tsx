@@ -119,7 +119,7 @@ export function DocumentationPage() {
       </div>
 
       {/* Contenu scrollable — tout sur une page */}
-      <div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto scroll-smooth pl-6">
+      <div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pl-6">
         <div className="pb-[50vh]">
           {allSections.map((section, sectionIdx) => (
             <div key={section.id} className="mx-auto max-w-4xl">
