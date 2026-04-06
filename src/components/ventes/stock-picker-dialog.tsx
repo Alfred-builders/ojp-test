@@ -31,11 +31,8 @@ import {
 function calculerTFOP(prixVente: number): number {
   return Math.round(prixVente * 0.065 * 100) / 100;
 }
-import type { BijouxStock } from "@/types/bijoux";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount);
-}
+import { formatCurrency } from "@/lib/format";
+import type { BijouxStock, Reparation } from "@/types/bijoux";
 
 interface StockPickerFormProps {
   lotId: string;
@@ -55,6 +52,7 @@ export function StockPickerForm({
   const [error, setError] = useState("");
 
   const [stockItems, setStockItems] = useState<BijouxStock[]>([]);
+  const [reparationsMap, setReparationsMap] = useState<Record<string, Reparation[]>>({});
   const [loading, setLoading] = useState(true);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState("");
@@ -83,7 +81,25 @@ export function StockPickerForm({
           items = [editItem as BijouxStock, ...items];
         }
       }
-      setStockItems(items.filter((item) => !excludeIds.includes(item.id)));
+      const filteredItems = items.filter((item) => !excludeIds.includes(item.id));
+      setStockItems(filteredItems);
+
+      // Load completed repairs for all stock items to include repair costs in price
+      if (filteredItems.length > 0) {
+        const ids = filteredItems.map((i) => i.id);
+        const { data: reps } = await supabase
+          .from("reparations")
+          .select("*")
+          .in("bijou_id", ids)
+          .eq("statut", "terminee");
+        const map: Record<string, Reparation[]> = {};
+        for (const rep of (reps ?? []) as Reparation[]) {
+          if (!map[rep.bijou_id]) map[rep.bijou_id] = [];
+          map[rep.bijou_id].push(rep);
+        }
+        setReparationsMap(map);
+      }
+
       setLoading(false);
     }
 
@@ -103,7 +119,15 @@ export function StockPickerForm({
 
   const selectedItem = stockItems.find((item) => item.id === selectedId);
 
-  const prixVente = selectedItem?.prix_revente ?? 0;
+  // Sum completed repair costs for the selected item
+  const coutReparation = useMemo(() => {
+    if (!selectedItem) return 0;
+    const reps = reparationsMap[selectedItem.id] ?? [];
+    return reps.reduce((sum, r) => sum + (r.cout_reel ?? 0), 0);
+  }, [selectedItem, reparationsMap]);
+
+  const prixBase = selectedItem?.prix_revente ?? 0;
+  const prixVente = Math.round((prixBase + coutReparation) * 100) / 100;
   const taxeApplicable = prixVente > 5000;
   const montantTaxe = taxeApplicable ? calculerTFOP(prixVente) : 0;
 
@@ -130,6 +154,7 @@ export function StockPickerForm({
       prix_total: prixVente,
       taxe_applicable: taxeApplicable,
       montant_taxe: montantTaxe,
+      cout_reparation: coutReparation,
     };
 
     if (isEdit) {
@@ -183,7 +208,7 @@ export function StockPickerForm({
           <Diamond size={16} weight="duotone" />
           {isEdit ? `Modifier — ${editData.designation}` : "Ajouter un bijou du stock"}
         </CardTitle>
-        <Button variant="ghost" size="icon-xs" onClick={onClose}>
+        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Fermer">
           <X size={14} weight="regular" />
         </Button>
       </CardHeader>
@@ -274,27 +299,34 @@ export function StockPickerForm({
 
           {/* Price + Tax display */}
           {selectedItem && (
-            <div className={`grid gap-3 ${taxeApplicable ? "grid-cols-2" : "grid-cols-1"}`}>
-              <div className="rounded-lg bg-secondary text-secondary-foreground p-3 space-y-1">
-                <p className="text-xs text-secondary-foreground/70 flex items-center gap-1">
-                  <CurrencyEur size={12} weight="duotone" />
-                  Prix de vente
+            <div className="space-y-3">
+              {coutReparation > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Prix de base {formatCurrency(prixBase)} + reparation {formatCurrency(coutReparation)}
                 </p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(prixVente)}
-                </p>
-              </div>
-              {taxeApplicable && (
-                <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Receipt size={12} weight="duotone" />
-                    TFOP (6,5%)
+              )}
+              <div className={`grid gap-3 ${taxeApplicable ? "grid-cols-2" : "grid-cols-1"}`}>
+                <div className="rounded-lg bg-secondary text-secondary-foreground p-3 space-y-1">
+                  <p className="text-xs text-secondary-foreground/70 flex items-center gap-1">
+                    <CurrencyEur size={12} weight="duotone" />
+                    Prix de vente
                   </p>
                   <p className="text-lg font-bold">
-                    {formatCurrency(montantTaxe)}
+                    {formatCurrency(prixVente)}
                   </p>
                 </div>
-              )}
+                {taxeApplicable && (
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Receipt size={12} weight="duotone" />
+                      TFOP (6,5%)
+                    </p>
+                    <p className="text-lg font-bold">
+                      {formatCurrency(montantTaxe)}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -304,7 +336,7 @@ export function StockPickerForm({
             </Button>
             <Button type="submit" size="sm" disabled={saving || !selectedItem}>
               <FloppyDisk size={16} weight="duotone" />
-              {saving ? "Sauvegarde..." : isEdit ? "Enregistrer" : "Ajouter"}
+              {saving ? "Enregistrement..." : isEdit ? "Enregistrer" : "Ajouter"}
             </Button>
           </div>
         </form>

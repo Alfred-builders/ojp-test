@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,11 @@ import {
   FileText,
   Diamond,
   Coins,
+  Timer,
+  WarningCircle,
+  ClipboardText,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,27 +40,20 @@ import {
 import { Header } from "@/components/dashboard/header";
 import { VenteStatusBadge } from "@/components/ventes/vente-status-badge";
 import { VenteStatusActions } from "@/components/ventes/vente-status-actions";
-import { VenteSummaryCard } from "@/components/ventes/vente-summary-card";
+
+import { LotStepper } from "@/components/lots/lot-stepper";
 import { VenteLigneCard } from "@/components/ventes/vente-ligne-card";
 import { StockPickerForm } from "@/components/ventes/stock-picker-dialog";
 import { OrInvestPickerForm } from "@/components/ventes/or-invest-picker-form";
+import { ReglementsCard } from "@/components/reglements/reglements-card";
+import { detectPaymentsDue } from "@/lib/reglements/detect-payments-due";
+import { getSettingClient } from "@/lib/settings-client";
 import type { LotWithVenteLignes } from "@/types/lot";
+import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
 import type { VenteStatus, Facture } from "@/types/vente";
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(dateStr));
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(amount);
-}
+import type { Fonderie } from "@/types/fonderie";
+import type { Reglement } from "@/types/reglement";
+import type { BonCommande } from "@/types/bon-commande";
 
 interface VenteDetailPageProps {
   lot: LotWithVenteLignes & {
@@ -76,9 +73,13 @@ interface VenteDetailPageProps {
     };
   };
   facture: Facture | null;
+  orInvestStock?: Record<string, number>;
+  fonderies?: Fonderie[];
+  reglements?: Reglement[];
+  bonsCommande?: BonCommande[];
 }
 
-export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
+export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = [], reglements = [], bonsCommande = [] }: VenteDetailPageProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [showFormOrInvest, setShowFormOrInvest] = useState(false);
@@ -86,6 +87,14 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(lot.notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [acomptePct, setAcomptePct] = useState(10);
+
+  useEffect(() => {
+    getSettingClient("business_rules").then((rules) => {
+      if (rules) setAcomptePct(rules.acompte_pct);
+    });
+  }, []);
 
   const status = lot.status as VenteStatus;
   const isBrouillon = status === "brouillon";
@@ -95,6 +104,33 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
   const existingStockIds = lot.lignes
     .map((l) => l.bijoux_stock_id)
     .filter((id): id is string => id !== null);
+
+  const paymentsDue = detectPaymentsDue({
+    lot,
+    lignes: lot.lignes,
+    reglements,
+    bonsCommande,
+    clientId: lot.dossier.client.id,
+    acompte_pct: acomptePct,
+  });
+
+  // Fonderie map
+  const fonderieMap = Object.fromEntries(fonderies.map((f) => [f.id, f.nom]));
+
+  // Stepper computed values
+  const hasOrInvest = lot.lignes.some((l) => l.or_investissement_id);
+  const orInvestLignes = lot.lignes.filter((l) => l.or_investissement_id);
+  const allLivre = lot.lignes.length > 0 && lot.lignes.every((l) => l.is_livre);
+
+  // Compute worst fulfillment across or invest lines
+  const fulfillmentOrder = ["pending", "a_commander", "commande", "recu", "servi_stock"];
+  const worstFulfillment = orInvestLignes.length > 0
+    ? orInvestLignes.reduce((worst, l) => {
+        const wIdx = fulfillmentOrder.indexOf(worst);
+        const lIdx = fulfillmentOrder.indexOf(l.fulfillment ?? "pending");
+        return lIdx < wIdx ? (l.fulfillment ?? "pending") : worst;
+      }, "servi_stock")
+    : "pending";
 
   async function handleDeleteLigne(ligneId: string) {
     const supabase = createClient();
@@ -109,24 +145,27 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
         .single();
 
       const revertStatus = stockItem?.depot_vente_lot_id ? "en_depot_vente" : "en_stock";
-      await supabase
+      const { error: stockError } = await supabase
         .from("bijoux_stock")
         .update({ statut: revertStatus })
         .eq("id", ligne.bijoux_stock_id);
+      if (stockError) { toast.error("Erreur lors de la mise à jour du stock"); return; }
     }
 
-    await supabase.from("vente_lignes").delete().eq("id", ligneId);
+    const { error } = await supabase.from("vente_lignes").delete().eq("id", ligneId);
+    if (error) { toast.error("Erreur lors de la suppression de la ligne"); return; }
     router.refresh();
   }
 
   async function handleSaveNotes() {
     setSavingNotes(true);
     const supabase = createClient();
-    await supabase
+    const { error } = await supabase
       .from("lots")
       .update({ notes: notes || null })
       .eq("id", lot.id);
     setSavingNotes(false);
+    if (error) { toast.error("Erreur lors de l'enregistrement des notes"); return; }
     setEditingNotes(false);
     router.refresh();
   }
@@ -144,7 +183,7 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
         title={lot.numero}
         backAction={
           <Link href={`/dossiers/${lot.dossier.id}`}>
-            <Button variant="ghost" size="icon-sm">
+            <Button variant="ghost" size="icon-sm" aria-label="Retour">
               <ArrowLeft size={16} weight="regular" />
             </Button>
           </Link>
@@ -152,17 +191,57 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
       >
         <div className="flex items-center gap-2">
           <VenteStatusBadge status={status} />
-          <VenteStatusActions lot={lot} />
+          {isBrouillon && (
+            <Button
+              size="sm"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                const supabase = createClient();
+                const { error } = await supabase.from("lots").update({ updated_at: new Date().toISOString() }).eq("id", lot.id);
+                setSaving(false);
+                if (error) { toast.error("Erreur lors de l'enregistrement"); return; }
+                router.push(`/dossiers/${lot.dossier.id}`);
+              }}
+            >
+              <FloppyDisk size={16} weight="duotone" />
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          )}
         </div>
       </Header>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Summary cards */}
-        <VenteSummaryCard
-          totalPrixVente={lot.total_prix_revente}
-          montantTaxe={lot.montant_taxe}
-          nbArticles={lot.lignes.reduce((sum, l) => sum + l.quantite, 0)}
-        />
+        {/* Acompte 48h deadline alert */}
+        {lot.acompte_paye && !lot.solde_paye && lot.date_limite_solde && status === "en_cours" && (() => {
+          const deadline = new Date(lot.date_limite_solde);
+          const now = new Date();
+          const remaining = deadline.getTime() - now.getTime();
+          const isExpired = remaining <= 0;
+          const hours = Math.max(0, Math.floor(remaining / (1000 * 60 * 60)));
+          const minutes = Math.max(0, Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60)));
+          const deadlineStr = formatDateTime(deadline.toISOString());
+
+          return (
+            <div className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${isExpired ? "border-destructive bg-destructive/5" : "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"}`}>
+              {isExpired ? (
+                <WarningCircle size={20} weight="duotone" className="text-destructive shrink-0" />
+              ) : (
+                <Timer size={20} weight="duotone" className="text-amber-600 dark:text-amber-400 shrink-0" />
+              )}
+              <div className="flex-1 text-sm">
+                {isExpired ? (
+                  <span className="font-medium text-destructive">Délai de paiement expiré — cette commande sera annulée automatiquement.</span>
+                ) : (
+                  <>
+                    <span className="font-medium">Acompte de {formatCurrency(lot.acompte_montant)} encaissé.</span>
+                    <span className="text-muted-foreground"> Solde à régler avant le {deadlineStr} ({hours}h{minutes.toString().padStart(2, "0")} restantes)</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Vente info */}
@@ -215,24 +294,33 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
               </Link>
             </CardHeader>
             <CardContent>
-              <DetailRow label="Nom" value={clientName} />
-              <DetailRow
-                label="Validité"
-                value={
+              <DetailRow label="Nom" value={
+                <span className="inline-flex items-center gap-2">
+                  {clientName}
                   <Badge
                     variant={lot.dossier.client.is_valid ? "default" : "destructive"}
                     className={lot.dossier.client.is_valid ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30" : ""}
                   >
                     {lot.dossier.client.is_valid ? "Valide" : "Non valide"}
                   </Badge>
-                }
-              />
+                </span>
+              } />
               <DetailRow label="Téléphone" value={lot.dossier.client.phone ? <CopyableText value={lot.dossier.client.phone} /> : "—"} />
               <DetailRow label="Email" value={lot.dossier.client.email ? <CopyableText value={lot.dossier.client.email} /> : "—"} />
               <DetailRow label="Ville" value={lot.dossier.client.city ?? "—"} />
             </CardContent>
           </Card>
         </div>
+
+        {/* Stepper */}
+        <LotStepper
+          lotType="vente"
+          lotStatus={lot.status}
+          hasOrInvest={hasOrInvest}
+          worstFulfillment={worstFulfillment}
+          allLivre={allLivre}
+          isError={status === "annule"}
+        />
 
         {/* Facture */}
         {facture && (
@@ -260,6 +348,14 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
               <Storefront size={20} weight="duotone" />
               Articles ({lot.lignes.length})
             </CardTitle>
+            {!isBrouillon && hasOrInvest && (
+              <Link href="/commandes">
+                <Button variant="outline" size="sm">
+                  <ClipboardText size={14} weight="duotone" />
+                  Accéder aux commandes
+                </Button>
+              </Link>
+            )}
             {isBrouillon && !showForm && !showFormOrInvest && !editingLigne && (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -321,12 +417,31 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
                     onEdit={(l) => setEditingLigne(l)}
                     onDelete={handleDeleteLigne}
                     canEdit={isBrouillon}
+                    showLivraison={status === "en_cours"}
+                    onLivraisonChange={() => router.refresh()}
+                    showFulfillment={status === "en_cours"}
+                    orInvestStock={ligne.or_investissement_id ? (orInvestStock[ligne.or_investissement_id] ?? 0) : 0}
+                    fonderieName={ligne.fonderie_id ? fonderieMap[ligne.fonderie_id] : undefined}
                   />
                 )
               )
             )}
           </CardContent>
         </Card>
+
+        {/* Terminer la vente — card contextuelle */}
+        {status === "en_cours" && (
+          <VenteStatusActions lot={lot} reglements={reglements} mode="terminer" />
+        )}
+
+        {/* Reglements */}
+        {status !== "brouillon" && (
+          <ReglementsCard
+            lotId={lot.id}
+            reglements={reglements}
+            paymentsDue={paymentsDue}
+          />
+        )}
 
         {/* Notes */}
         <Card>
@@ -338,11 +453,11 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
             {editingNotes ? (
               <Button variant="secondary" size="sm" disabled={savingNotes} onClick={handleSaveNotes}>
                 <FloppyDisk size={14} weight="duotone" />
-                {savingNotes ? "Sauvegarde..." : "Sauvegarder"}
+                {savingNotes ? "Enregistrement..." : "Enregistrer"}
               </Button>
             ) : (
               !isTerminal && (
-                <Button variant="ghost" size="icon-sm" onClick={() => setEditingNotes(true)}>
+                <Button variant="ghost" size="icon-sm" onClick={() => setEditingNotes(true)} aria-label="Modifier les notes">
                   <PencilSimple size={16} weight="duotone" />
                 </Button>
               )
@@ -363,14 +478,21 @@ export function VenteDetailPage({ lot, facture }: VenteDetailPageProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Annuler la vente — discret en bas de page */}
+        {status === "en_cours" && (
+          <div className="flex justify-end pt-2">
+            <VenteStatusActions lot={lot} reglements={reglements} mode="annuler" />
+          </div>
+        )}
       </div>
     </>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+function DetailRow({ label, value, noBorder }: { label: string; value: React.ReactNode; noBorder?: boolean }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b last:border-0">
+    <div className={`flex items-center justify-between py-2 ${noBorder ? "" : "border-b last:border-0"}`}>
       <span className="text-muted-foreground shrink-0">{label}</span>
       <span className="font-medium text-right">{value}</span>
     </div>

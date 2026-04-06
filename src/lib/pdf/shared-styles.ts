@@ -66,10 +66,63 @@ export const styles = StyleSheet.create({
   spaceBetween: { flexDirection: "row", justifyContent: "space-between" },
   mb4: { marginBottom: 4 },
   mt8: { marginTop: 8 },
+  // CDV-specific styles
+  cdvTitle: { fontSize: 18, fontFamily: "Courier-Bold", color: "#1A1A1A", marginBottom: 4 },
+  cdvNumero: { fontSize: 9, color: "#777777" },
+  cdvTwoCol: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16, gap: 20 },
+  cdvColLeft: { flex: 1, borderWidth: 0.5, borderColor: "#E0E0E0", padding: 10, borderRadius: 2 },
+  cdvColRight: { flex: 1, borderWidth: 0.5, borderColor: "#E0E0E0", padding: 10, borderRadius: 2 },
+  cdvColLabel: { fontSize: 6.5, fontFamily: "Courier-Bold", color: "#B8963E", marginBottom: 4, letterSpacing: 0.5 },
+  cdvColName: { fontSize: 9, fontFamily: "Courier-Bold", color: "#1A1A1A", marginBottom: 2 },
+  cdvColLine: { fontSize: 7.5, color: "#777777", marginBottom: 1 },
+  cdvClauseTitle: { fontSize: 6.5, fontFamily: "Courier-Bold", color: "#1A1A1A", marginBottom: 3, marginTop: 8 },
+  cdvClauseBody: { fontSize: 5.5, color: "#777777", lineHeight: 1.5 },
+  cdvSignatureSection: { marginTop: 16, alignItems: "center" },
+  cdvSignatureTitle: { fontSize: 7, fontFamily: "Courier-Bold", color: "#B8963E", textAlign: "center", marginBottom: 6 },
+  cdvSignatureDate: { fontSize: 7, color: "#777777", textAlign: "center", marginBottom: 16 },
+  cdvSignatureRow: { flexDirection: "row", justifyContent: "space-between", width: "100%" },
+  cdvSignatureZone: { width: "40%" },
+  cdvSignatureLabel: { fontSize: 7, fontFamily: "Courier-Bold", color: "#1A1A1A", marginBottom: 20 },
+  // FVE-specific styles (facture de vente)
+  fveTitle: { fontSize: 18, fontFamily: "Courier-Bold", color: "#B8963E" },
+  fveNumero: { fontSize: 9, color: "#777777", marginTop: 2 },
+  fveClientBox: { borderLeftWidth: 2, borderLeftColor: "#B8963E", paddingLeft: 12, paddingVertical: 8, marginBottom: 20 },
+  fveDateRow: { textAlign: "right" as const, fontSize: 8, color: "#333333", marginBottom: 2 },
+  fveCgvTitle: { fontSize: 7, fontFamily: "Courier-Bold", color: "#B8963E", marginBottom: 4 },
+  fveCgvText: { fontSize: 6, color: "#777777", lineHeight: 1.5 },
+  fveCutLine: { borderBottomWidth: 1, borderBottomColor: "#777777", borderStyle: "dashed" as const, marginVertical: 20 },
+  fveSigLabel: { fontSize: 8, color: "#777777", textAlign: "center" as const, marginTop: 10, fontFamily: "Courier-Oblique" },
+  // QDV-specific styles (quittance dépôt-vente)
+  qdvRefText: { fontSize: 7, color: "#AAAAAA", marginTop: 3 },
 });
 
 export const W = {
   des: "26%", met: "9%", tit: "8%", poi: "8%", qte: "6%", tax: "9%", pu: "16%", pt: "18%",
+};
+
+// CDV column widths (page 2 table)
+export const W_CDV = {
+  des: "25%", desc: "35%", prixNet: "20%", prixPublic: "20%",
+};
+
+// CONF column widths
+export const W_CONF = {
+  titre: "12%", des: "28%", qte: "10%", poids: "12%", prixAchat: "18%", prixVente: "20%",
+};
+
+// QDV column widths (quittance dépôt-vente)
+export const W_QDV = {
+  des: "28%", desc: "24%", prixVente: "16%", commission: "16%", netDeposant: "16%",
+};
+
+// FVE column widths (facture de vente)
+export const W_FVE = {
+  titre: "12%", des: "34%", poids: "12%", qte: "8%", puHT: "16%", totalHT: "18%",
+};
+
+// BDL column widths (bon de livraison)
+export const W_BDL = {
+  des: "34%", poids: "14%", cours: "18%", valeur: "18%",
 };
 
 export function fmt(n: number): string {

@@ -6,7 +6,7 @@ import {
   type DocumentInfo, type ClientInfo, type DossierInfo,
   type ReferenceLigne, type TotauxInfo,
 } from "./blocks";
-import { LOGO_BASE64 } from "./logo";
+
 
 // ============================================================
 // Styles

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { MapPin } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
+import { mutate } from "@/lib/supabase/mutation";
 import {
   Select,
   SelectContent,
@@ -28,10 +29,14 @@ export function DestinationSelector({ lot }: DestinationSelectorProps) {
   const supabase = createClient();
 
   async function handleDestinationChange(refId: string, destination: string) {
-    await supabase
-      .from("lot_references")
-      .update({ destination: destination as ReferenceDestination })
-      .eq("id", refId);
+    const { error } = await mutate(
+      supabase
+        .from("lot_references")
+        .update({ destination: destination as ReferenceDestination })
+        .eq("id", refId),
+      "Erreur lors de la mise à jour de la destination"
+    );
+    if (error) return;
     router.refresh();
   }
 

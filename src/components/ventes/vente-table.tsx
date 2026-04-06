@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, Storefront } from "@phosphor-icons/react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Storefront } from "@phosphor-icons/react";
 import type { LotWithDossier } from "@/types/lot";
 import type { VenteStatus } from "@/types/vente";
 import {
@@ -19,26 +19,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { VenteStatusBadge } from "@/components/ventes/vente-status-badge";
 import { VenteToolbar } from "@/components/ventes/vente-toolbar";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(dateStr));
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(amount);
-}
+import { formatDate, formatCurrency } from "@/lib/format";
 
 type SortKey = "numero" | "client" | "status" | "total_prix_revente" | "created_at";
 type SortDir = "asc" | "desc";
@@ -80,14 +65,21 @@ function SortableHead({
   );
 }
 
-export function VenteTable({ data }: { data: LotWithDossier[] }) {
+interface VenteTableProps {
+  data: LotWithDossier[];
+  totalItems: number;
+  page: number;
+  pageSize: number;
+}
+
+export function VenteTable({ data, totalItems, page, pageSize }: VenteTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilters, setStatusFilters] = useState<VenteStatus[]>([]);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -135,19 +127,29 @@ export function VenteTable({ data }: { data: LotWithDossier[] }) {
     return result;
   }, [data, search, statusFilters, sortKey, sortDir]);
 
-  const totalItems = filtered.length;
-  const paginatedData = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  function navigatePage(newPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(newPage));
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  function navigatePageSize(newSize: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("size", String(newSize));
+    params.set("page", "0");
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
       <VenteToolbar
         search={search}
-        onSearchChange={(v) => { setSearch(v); setCurrentPage(0); }}
+        onSearchChange={setSearch}
         statusFilters={statusFilters}
-        onStatusFiltersChange={(v) => { setStatusFilters(v); setCurrentPage(0); }}
+        onStatusFiltersChange={setStatusFilters}
       />
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-white dark:bg-card">
-        <Table className={paginatedData.length === 0 ? "h-full" : ""}>
+      <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
+        <Table className={filtered.length === 0 ? "h-full" : ""}>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow className="bg-transparent hover:bg-transparent">
               <SortableHead sortKey="numero" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="pl-4">
@@ -169,14 +171,14 @@ export function VenteTable({ data }: { data: LotWithDossier[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.length === 0 ? (
+            {filtered.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={6} className="h-24 px-4 text-center text-muted-foreground">
                   Aucune vente trouvée.
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedData.map((item) => {
+              filtered.map((item) => {
                 const clientName = `${item.dossier.client.civility === "M" ? "M." : "Mme"} ${item.dossier.client.first_name} ${item.dossier.client.last_name}`;
                 return (
                   <TableRow
@@ -208,6 +210,7 @@ export function VenteTable({ data }: { data: LotWithDossier[] }) {
                               variant="ghost"
                               size="icon-xs"
                               onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                              aria-label="Actions"
                             />
                           }
                         >
@@ -223,16 +226,6 @@ export function VenteTable({ data }: { data: LotWithDossier[] }) {
                             <Eye size={16} weight="duotone" />
                             Voir détail
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation();
-                            }}
-                          >
-                            <Trash size={16} weight="duotone" />
-                            Supprimer
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -246,9 +239,9 @@ export function VenteTable({ data }: { data: LotWithDossier[] }) {
       <DataTablePagination
         totalItems={totalItems}
         pageSize={pageSize}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
+        currentPage={page}
+        onPageChange={navigatePage}
+        onPageSizeChange={navigatePageSize}
       />
     </div>
   );

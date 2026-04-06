@@ -11,13 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(amount);
-}
+import { formatCurrency } from "@/lib/format";
 
 interface VenteSummaryCardProps {
   totalPrixVente: number;

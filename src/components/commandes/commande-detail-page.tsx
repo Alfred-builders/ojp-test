@@ -11,9 +11,14 @@ import {
   Coins,
   Package,
   CheckCircle,
+  Handshake,
   WarningCircle,
+  ShoppingCart,
+  Truck,
+  CurrencyEur,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
+import { mutate } from "@/lib/supabase/mutation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,19 +29,16 @@ import {
 } from "@/components/ui/card";
 import { Header } from "@/components/dashboard/header";
 import { VenteStatusBadge } from "@/components/ventes/vente-status-badge";
+import { formatCurrency } from "@/lib/format";
 import type { LotWithVenteLignes } from "@/types/lot";
 import type { VenteStatus, VenteLigne, FulfillmentStatus } from "@/types/vente";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount);
-}
 
 const FULFILLMENT_CONFIG: Record<FulfillmentStatus, { label: string; className: string }> = {
   pending: { label: "En attente", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
   servi_stock: { label: "Servi stock", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
   a_commander: { label: "À commander", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
   commande: { label: "Commandé", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  recu: { label: "Reçu", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  recu: { label: "En magasin", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
 };
 
 interface CommandeDetailPageProps {
@@ -57,6 +59,113 @@ interface CommandeDetailPageProps {
   orInvestStock: Record<string, number>;
 }
 
+function computeCurrentStep(
+  lot: CommandeDetailPageProps["lot"],
+  lignes: VenteLigne[],
+  allFulfilled: boolean
+): number {
+  if (lot.status === "termine" || lot.status === "finalise") return 4;
+  if (allFulfilled) {
+    const allLivre = lignes.every((l) => l.is_livre);
+    if (allLivre) return 3;
+    return 2;
+  }
+  // All items are at least "commande" or fulfilled
+  const allCommande = lignes.every(
+    (l) => l.fulfillment === "commande" || l.fulfillment === "recu" || l.fulfillment === "servi_stock"
+  );
+  if (allCommande) return 2;
+  // All items are at least flagged for ordering (no more pending)
+  const allAtLeastACommander = lignes.every(
+    (l) => l.fulfillment !== "pending"
+  );
+  if (allAtLeastACommander) return 1;
+  return 0;
+}
+
+const STEPS = [
+  { label: "À commander", icon: ShoppingCart, description: "En attente de choix fonderie" },
+  { label: "Commandé", icon: Truck, description: "Bon de commande envoyé, en attente de livraison" },
+  { label: "En magasin", icon: Package, description: "Reçu en boutique, disponible pour le client" },
+  { label: "Remis au client", icon: Handshake, description: "Le client a récupéré son or" },
+  { label: "Réglé", icon: CurrencyEur, description: "Paiement effectué, commande terminée" },
+];
+
+function CommandeStepper({
+  lot,
+  lignes,
+  allFulfilled,
+}: {
+  lot: CommandeDetailPageProps["lot"];
+  lignes: VenteLigne[];
+  allFulfilled: boolean;
+}) {
+  const currentStep = computeCurrentStep(lot, lignes, allFulfilled);
+
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="pt-4 pb-3 !px-0">
+        <div className="flex items-start">
+          {STEPS.map((step, idx) => {
+            const Icon = step.icon;
+            const isCompleted = idx < currentStep;
+            const isCurrent = idx === currentStep;
+
+            return (
+              <div key={step.label} className="flex flex-1 flex-col items-center relative">
+                {/* Connector line */}
+                {idx > 0 && (
+                  <div
+                    className={`absolute top-4 right-1/2 w-full h-0.5 -translate-y-1/2 ${
+                      isCompleted || isCurrent ? "bg-foreground/30" : "bg-muted"
+                    }`}
+                    style={{ zIndex: 0 }}
+                  />
+                )}
+
+                {/* Icon circle */}
+                <div
+                  className={`relative z-10 flex size-8 items-center justify-center rounded-full transition-colors ${
+                    isCompleted
+                      ? "bg-foreground text-primary"
+                      : isCurrent
+                        ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {isCompleted ? (
+                    <CheckCircle size={16} weight="bold" />
+                  ) : (
+                    <Icon size={16} weight={isCurrent ? "fill" : "duotone"} />
+                  )}
+                </div>
+
+                {/* Label */}
+                <span
+                  className={`mt-2 text-xs font-medium text-center ${
+                    isCompleted
+                      ? "text-foreground"
+                      : isCurrent
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  {step.label}
+                </span>
+
+                {/* Description */}
+                <span className="mt-0.5 text-[10px] text-muted-foreground text-center max-w-[120px]">
+                  {step.description}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPageProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -72,44 +181,62 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
   ).length;
   const totalOrInvest = orInvestLignes.length;
   const allFulfilled = totalOrInvest > 0 && completedCount === totalOrInvest;
-  const progressPct = totalOrInvest > 0 ? (completedCount / totalOrInvest) * 100 : 0;
 
   async function handleFulfillment(ligneId: string, status: FulfillmentStatus, ligne: VenteLigne) {
     setLoading(true);
     const supabase = createClient();
 
-    await supabase
-      .from("vente_lignes")
-      .update({ fulfillment: status })
-      .eq("id", ligneId);
+    const { error } = await mutate(
+      supabase
+        .from("vente_lignes")
+        .update({ fulfillment: status })
+        .eq("id", ligneId),
+      "Erreur lors de la mise à jour du fulfillment"
+    );
+    if (error) { setLoading(false); return; }
 
     // If serving from stock, decrement or_investissement quantity
     if (status === "servi_stock" && ligne.or_investissement_id) {
-      await supabase.rpc("increment_or_invest_quantite", {
-        p_id: ligne.or_investissement_id,
-        p_qty: -ligne.quantite,
-      });
+      const { error: rpcErr } = await mutate(
+        supabase.rpc("increment_or_invest_quantite", {
+          p_id: ligne.or_investissement_id,
+          p_qty: -ligne.quantite,
+        }),
+        "Erreur lors de la mise à jour du stock"
+      );
+      if (rpcErr) { setLoading(false); return; }
     }
 
     // If reverting from servi_stock, re-increment
     if (ligne.fulfillment === "servi_stock" && status !== "servi_stock" && ligne.or_investissement_id) {
-      await supabase.rpc("increment_or_invest_quantite", {
-        p_id: ligne.or_investissement_id,
-        p_qty: ligne.quantite,
-      });
+      const { error: revertErr } = await mutate(
+        supabase.rpc("increment_or_invest_quantite", {
+          p_id: ligne.or_investissement_id,
+          p_qty: ligne.quantite,
+        }),
+        "Erreur lors du rétablissement du stock"
+      );
+      if (revertErr) { setLoading(false); return; }
     }
 
-    setLoading(false);
-    router.refresh();
-  }
+    // Auto-finalize if all or_invest lines are now fulfilled
+    if (status === "servi_stock" || status === "recu") {
+      const otherLignes = orInvestLignes.filter((l) => l.id !== ligneId);
+      const othersAllFulfilled = otherLignes.every(
+        (l) => l.fulfillment === "servi_stock" || l.fulfillment === "recu"
+      );
+      if (othersAllFulfilled) {
+        const { error: finalErr } = await mutate(
+          supabase
+            .from("lots")
+            .update({ status: "finalise", date_finalisation: new Date().toISOString() })
+            .eq("id", lot.id),
+          "Erreur lors de la finalisation du lot"
+        );
+        if (finalErr) { setLoading(false); return; }
+      }
+    }
 
-  async function handleCommandePrete() {
-    setLoading(true);
-    const supabase = createClient();
-    await supabase
-      .from("lots")
-      .update({ status: "finalise", date_finalisation: new Date().toISOString() })
-      .eq("id", lot.id);
     setLoading(false);
     router.refresh();
   }
@@ -120,42 +247,19 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
         title={lot.numero}
         backAction={
           <Link href="/commandes">
-            <Button variant="ghost" size="icon-sm">
+            <Button variant="ghost" size="icon-sm" aria-label="Retour">
               <ArrowLeft size={16} weight="regular" />
             </Button>
           </Link>
         }
       >
-        <div className="flex items-center gap-2">
-          <VenteStatusBadge status={lot.status as VenteStatus} />
-          {allFulfilled && lot.status !== "finalise" && (
-            <Button size="sm" disabled={loading} onClick={handleCommandePrete}>
-              <CheckCircle size={16} weight="duotone" />
-              {loading ? "En cours..." : "Commande prête"}
-            </Button>
-          )}
-        </div>
+        <VenteStatusBadge status={lot.status as VenteStatus} />
       </Header>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Progress bar */}
+        {/* Stepper */}
         {totalOrInvest > 0 && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">
-                  Progression : {completedCount}/{totalOrInvest} lignes complétées
-                </span>
-                <span className="text-sm text-muted-foreground">{Math.round(progressPct)}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${allFulfilled ? "bg-emerald-500" : "bg-primary"}`}
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <CommandeStepper lot={lot} lignes={orInvestLignes} allFulfilled={allFulfilled} />
         )}
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -280,7 +384,7 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
                           <Package size={14} weight="duotone" />
                           {canServeFromStock ? "Servir depuis stock" : `Stock insuffisant (${stockQty})`}
                         </Button>
-                        {ligne.fulfillment !== "a_commander" ? (
+                        {ligne.fulfillment === "pending" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -290,7 +394,19 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
                             <WarningCircle size={14} weight="duotone" />
                             À commander
                           </Button>
-                        ) : (
+                        )}
+                        {ligne.fulfillment === "a_commander" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={loading}
+                            onClick={() => handleFulfillment(ligne.id, "commande", ligne)}
+                          >
+                            <ClipboardText size={14} weight="duotone" />
+                            Marquer commandé
+                          </Button>
+                        )}
+                        {ligne.fulfillment === "commande" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -298,7 +414,7 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
                             onClick={() => handleFulfillment(ligne.id, "recu", ligne)}
                           >
                             <CheckCircle size={14} weight="duotone" />
-                            Marquer reçu
+                            Marquer en magasin
                           </Button>
                         )}
                       </div>

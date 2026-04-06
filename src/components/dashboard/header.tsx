@@ -1,7 +1,9 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
+import { SearchTrigger } from "@/components/dashboard/search-trigger";
 
 interface HeaderProps {
-  title: string;
+  title: React.ReactNode;
   children?: React.ReactNode;
   backAction?: React.ReactNode;
 }
@@ -12,7 +14,11 @@ export function Header({ title, children, backAction }: HeaderProps) {
       <SidebarTrigger />
       {backAction}
       <h1 className="text-lg font-semibold">{title}</h1>
-      {children && <div className="ml-auto flex items-center gap-2">{children}</div>}
+      <div className="ml-auto flex items-center gap-2">
+        {children}
+        <SearchTrigger />
+        <NotificationBell />
+      </div>
     </header>
   );
 }

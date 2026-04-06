@@ -26,11 +26,8 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { formatCurrency } from "@/lib/format";
 import type { OrInvestissement } from "@/types/or-investissement";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount);
-}
 
 interface OrInvestPickerFormProps {
   lotId: string;
@@ -147,7 +144,7 @@ export function OrInvestPickerForm({ lotId, onClose, coursOrSnapshot, coursArgen
           <Coins size={16} weight="duotone" />
           Ajouter un or investissement
         </CardTitle>
-        <Button variant="ghost" size="icon-xs" onClick={onClose}>
+        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Fermer">
           <X size={14} weight="regular" />
         </Button>
       </CardHeader>
@@ -276,7 +273,7 @@ export function OrInvestPickerForm({ lotId, onClose, coursOrSnapshot, coursArgen
             </Button>
             <Button type="submit" size="sm" disabled={saving || !selectedItem}>
               <FloppyDisk size={16} weight="duotone" />
-              {saving ? "Sauvegarde..." : "Ajouter"}
+              {saving ? "Enregistrement..." : "Ajouter"}
             </Button>
           </div>
         </form>

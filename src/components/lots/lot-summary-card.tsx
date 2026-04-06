@@ -14,13 +14,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(amount);
-}
+import { formatCurrency } from "@/lib/format";
+import type { UserRole } from "@/types/auth";
 
 interface LotSummaryCardProps {
   totalPrixAchat: number;
@@ -29,6 +24,7 @@ interface LotSummaryCardProps {
   montantTaxe: number;
   montantNet: number;
   lotType?: "rachat" | "depot_vente";
+  role?: UserRole;
 }
 
 export function LotSummaryCard({
@@ -38,11 +34,13 @@ export function LotSummaryCard({
   montantTaxe,
   montantNet,
   lotType = "rachat",
+  role = "proprietaire",
 }: LotSummaryCardProps) {
+  const isOwner = role === "proprietaire";
   if (lotType === "depot_vente") {
     const commission = totalPrixRevente - totalPrixAchat;
     return (
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className={`grid gap-3 ${isOwner ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
         <Card className="bg-secondary text-secondary-foreground">
           <CardHeader className="pb-0">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-secondary-foreground/70">
@@ -65,23 +63,25 @@ export function LotSummaryCard({
             <p className="text-2xl font-bold">{formatCurrency(totalPrixRevente)}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Percent size={16} weight="duotone" />
-              Commission (40%)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatCurrency(commission)}</p>
-          </CardContent>
-        </Card>
+        {isOwner && (
+          <Card>
+            <CardHeader className="pb-0">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Percent size={16} weight="duotone" />
+                Commission (40%)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{formatCurrency(commission)}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-4">
+    <div className={`grid gap-3 ${isOwner ? "md:grid-cols-4" : "md:grid-cols-2"}`}>
       <Card className="bg-secondary text-secondary-foreground">
         <CardHeader className="pb-0">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-secondary-foreground/70">
@@ -104,28 +104,32 @@ export function LotSummaryCard({
           <p className="text-2xl font-bold">{formatCurrency(montantTaxe)}</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="pb-0">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Wallet size={16} weight="duotone" />
-            Montant net
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold">{formatCurrency(montantNet)}</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-0">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <TrendUp size={16} weight="duotone" />
-            Marge brute
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold">{formatCurrency(margeBrute)}</p>
-        </CardContent>
-      </Card>
+      {isOwner && (
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Wallet size={16} weight="duotone" />
+              Montant net
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(montantNet)}</p>
+          </CardContent>
+        </Card>
+      )}
+      {isOwner && (
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <TrendUp size={16} weight="duotone" />
+              Marge brute
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(margeBrute)}</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

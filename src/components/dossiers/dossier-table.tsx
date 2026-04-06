@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, FolderOpen } from "@phosphor-icons/react";
 import type { DossierWithClient, DossierStatus } from "@/types/dossier";
 import {
@@ -23,14 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DossierToolbar } from "@/components/dossiers/dossier-toolbar";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(dateStr));
-}
+import { formatDate } from "@/lib/format";
 
 function clientDisplayName(client: DossierWithClient["client"]) {
   return `${client.civility === "M" ? "M." : "Mme"} ${client.first_name} ${client.last_name}`;
@@ -76,14 +69,21 @@ function SortableHead({
   );
 }
 
-export function DossierTable({ data }: { data: DossierWithClient[] }) {
+interface DossierTableProps {
+  data: DossierWithClient[];
+  totalItems: number;
+  page: number;
+  pageSize: number;
+}
+
+export function DossierTable({ data, totalItems, page, pageSize }: DossierTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<DossierStatus | null>(null);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -131,19 +131,29 @@ export function DossierTable({ data }: { data: DossierWithClient[] }) {
     return result;
   }, [data, search, statusFilter, sortKey, sortDir]);
 
-  const totalItems = filtered.length;
-  const paginatedData = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  function navigatePage(newPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(newPage));
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  function navigatePageSize(newSize: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("size", String(newSize));
+    params.set("page", "0");
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
       <DossierToolbar
         search={search}
-        onSearchChange={(v) => { setSearch(v); setCurrentPage(0); }}
+        onSearchChange={setSearch}
         statusFilter={statusFilter}
-        onStatusFilterChange={(v) => { setStatusFilter(v); setCurrentPage(0); }}
+        onStatusFilterChange={setStatusFilter}
       />
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-white dark:bg-card">
-        <Table className={paginatedData.length === 0 ? "h-full" : ""}>
+      <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
+        <Table className={filtered.length === 0 ? "h-full" : ""}>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow className="bg-transparent hover:bg-transparent">
               <SortableHead sortKey="numero" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="pl-4">
@@ -162,14 +172,14 @@ export function DossierTable({ data }: { data: DossierWithClient[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.length === 0 ? (
+            {filtered.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={5} className="h-24 px-4 text-center text-muted-foreground">
                   Aucun dossier trouvé.
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedData.map((item) => (
+              filtered.map((item) => (
                 <TableRow
                   key={item.id}
                   className="cursor-pointer bg-white dark:bg-card"
@@ -207,6 +217,7 @@ export function DossierTable({ data }: { data: DossierWithClient[] }) {
                             variant="ghost"
                             size="icon-xs"
                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            aria-label="Actions"
                           />
                         }
                       >
@@ -244,9 +255,9 @@ export function DossierTable({ data }: { data: DossierWithClient[] }) {
       <DataTablePagination
         totalItems={totalItems}
         pageSize={pageSize}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
+        currentPage={page}
+        onPageChange={navigatePage}
+        onPageSizeChange={navigatePageSize}
       />
     </div>
   );

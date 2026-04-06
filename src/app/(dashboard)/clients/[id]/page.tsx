@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ClientDetailPage } from "@/components/clients/client-detail-page";
 import type { Client, ClientIdentityDocument } from "@/types/client";
 import type { Dossier } from "@/types/dossier";
+import type { DocumentRecord } from "@/types/document";
 
 export default async function ClientDetailRoute({
   params,
@@ -18,7 +19,7 @@ export default async function ClientDetailRoute({
     .eq("id", id)
     .single();
 
-  if (!client) notFound();
+  if (!client) return notFound();
 
   const { data: documents } = await supabase
     .from("client_identity_documents")
@@ -32,11 +33,18 @@ export default async function ClientDetailRoute({
     .eq("client_id", id)
     .order("created_at", { ascending: false });
 
+  const { data: pdfDocuments } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("client_id", id)
+    .order("created_at", { ascending: false });
+
   return (
     <ClientDetailPage
       client={client as Client}
       identityDocuments={(documents ?? []) as ClientIdentityDocument[]}
       dossiers={(dossiers ?? []) as Dossier[]}
+      pdfDocuments={(pdfDocuments ?? []) as DocumentRecord[]}
     />
   );
 }

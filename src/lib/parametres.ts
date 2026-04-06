@@ -13,10 +13,15 @@ const DEFAULT_PARAMETRES: Parametres = {
 
 export async function getParametres(): Promise<Parametres> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("parametres")
     .select("*")
     .eq("id", 1)
-    .single();
-  return (data as Parametres) ?? DEFAULT_PARAMETRES;
+    .single<Parametres>();
+
+  if (error || !data) {
+    console.error("Failed to fetch parametres:", error);
+    return DEFAULT_PARAMETRES;
+  }
+  return data;
 }

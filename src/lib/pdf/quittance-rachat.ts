@@ -2,7 +2,7 @@ import React from "react";
 import { Document, Page, View, Text, pdf, Image } from "@react-pdf/renderer";
 import { LOGO_BASE64 } from "./logo";
 import { styles as s, W, fmt } from "./shared-styles";
-import { TEXTE_CONDITIONS_ACHAT, type ClientInfo, type DossierInfo, type ReferenceLigne, type TotauxInfo } from "./blocks";
+import { TEXTE_CONDITIONS_ACHAT, SOCIETE, type ClientInfo, type DossierInfo, type ReferenceLigne, type TotauxInfo } from "./blocks";
 
 export interface QuittanceRachatData {
   numero: string;
@@ -29,9 +29,9 @@ function Doc({ data }: { data: QuittanceRachatData }) {
     h(View, { style: s.header },
       h(Image, { style: s.logo, src: LOGO_BASE64 }),
       h(View, { style: s.headerRight },
-        h(Text, { style: s.companyName }, "L'OR AU JUSTE PRIX"),
-        h(Text, { style: s.companyLine }, "4 Grande Rue, 74160 St Julien en Genevois"),
-        h(Text, { style: s.companyLine }, "06 78 87 75 78"))),
+        h(Text, { style: s.companyName }, SOCIETE.nom.toUpperCase()),
+        h(Text, { style: s.companyLine }, SOCIETE.adresse),
+        h(Text, { style: s.companyLine }, SOCIETE.telephone))),
     // Info
     h(View, { style: s.infoSection },
       h(View, { style: s.clientBlock },
@@ -85,11 +85,10 @@ function Doc({ data }: { data: QuittanceRachatData }) {
         h(View, { style: s.sigBlock }, h(Text, { style: s.sigLabel }, "Signature du vendeur"), h(View, { style: s.sigLine })))),
     // Footer
     h(View, { style: s.footer, fixed: true },
-      h(Text, { style: s.footerText }, "L'Or au Juste Prix  \u00B7  SAS au capital de 5 000,00\u20AC"),
-      h(Text, { style: s.footerText }, "4 Grande Rue 74160 St Julien en Genevois  \u00B7  06 78 87 75 78"))));
+      h(Text, { style: s.footerText }, `${SOCIETE.nom}  \u00B7  ${SOCIETE.details}`),
+      h(Text, { style: s.footerText }, `${SOCIETE.adresse}  \u00B7  ${SOCIETE.telephone}`))));
 }
 
 export async function generateQuittanceRachat(data: QuittanceRachatData): Promise<Blob> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return await pdf(React.createElement(Doc, { data }) as any).toBlob();
+  return await pdf(React.createElement(Doc, { data }) as React.ReactElement<never>).toBlob();
 }

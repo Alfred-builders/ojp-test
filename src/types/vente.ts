@@ -1,4 +1,4 @@
-export type VenteStatus = "brouillon" | "en_cours" | "livre" | "a_regler" | "termine" | "annule" | "pret" | "finalise";
+export type VenteStatus = "brouillon" | "en_cours" | "termine" | "annule";
 
 export type FulfillmentStatus = "pending" | "servi_stock" | "a_commander" | "commande" | "recu";
 
@@ -19,6 +19,10 @@ export interface VenteLigne {
   taxe_applicable: boolean;
   montant_taxe: number;
   fulfillment: FulfillmentStatus;
+  fonderie_id: string | null;
+  bon_commande_id: string | null;
+  cout_reparation: number;
+  is_livre: boolean;
   created_at: string;
   updated_at: string;
 }

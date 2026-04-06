@@ -12,11 +12,8 @@ export type RachatStatus =
 export type VenteStatus =
   | "brouillon"
   | "en_cours"
-  | "livre"
-  | "a_regler"
   | "termine"
-  | "annule"
-  | "pret";
+  | "annule";
 
 export type LotStatus = RachatStatus | VenteStatus;
 
@@ -73,6 +70,13 @@ export interface Lot {
   date_reglement: string | null;
   mode_reglement: "especes" | "carte" | "virement" | "cheque" | null;
   numero_facture: string | null;
+  // Acompte fields (for or investissement sales)
+  acompte_montant: number | null;
+  acompte_paye: boolean;
+  date_acompte: string | null;
+  date_limite_solde: string | null;
+  solde_paye: boolean;
+  date_solde: string | null;
 }
 
 export interface LotReference {
@@ -111,6 +115,10 @@ export interface LotReference {
 
 export interface LotWithReferences extends Lot {
   references: LotReference[];
+}
+
+export interface LotWithReglements extends Lot {
+  reglements: import("@/types/reglement").Reglement[];
 }
 
 export interface LotWithVenteLignes extends Lot {

@@ -4,6 +4,11 @@ import { getParametres } from "@/lib/parametres";
 import { DossierDetailPage } from "@/components/dossiers/dossier-detail-page";
 import type { DossierWithClient } from "@/types/dossier";
 import type { Lot } from "@/types/lot";
+import type { DocumentRecord } from "@/types/document";
+import type { Reglement } from "@/types/reglement";
+import type { VenteLigne } from "@/types/vente";
+import type { LotReference } from "@/types/lot";
+import type { BonCommande } from "@/types/bon-commande";
 
 export default async function DossierDetailRoute({
   params,
@@ -15,11 +20,11 @@ export default async function DossierDetailRoute({
 
   const { data: dossier } = await supabase
     .from("dossiers")
-    .select("*, client:clients(id, civility, first_name, last_name, email, phone, city, is_valid)")
+    .select("*, client:clients(id, civility, first_name, last_name, email, phone, city, is_valid, address, postal_code)")
     .eq("id", id)
     .single();
 
-  if (!dossier) notFound();
+  if (!dossier) return notFound();
 
   const { data: lots } = await supabase
     .from("lots")
@@ -27,13 +32,74 @@ export default async function DossierDetailRoute({
     .eq("dossier_id", id)
     .order("created_at", { ascending: false });
 
+  const { data: documents } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("dossier_id", id)
+    .order("created_at", { ascending: false });
+
   const parametres = await getParametres();
+
+  // Fetch reglements for all lots in this dossier
+  const lotIds = (lots ?? []).map((l) => l.id);
+  let reglements: Reglement[] = [];
+  let venteLignes: VenteLigne[] = [];
+  let lotReferences: LotReference[] = [];
+
+  if (lotIds.length > 0) {
+    const [regRes, lignesRes, refsRes] = await Promise.all([
+      supabase
+        .from("reglements")
+        .select("*")
+        .in("lot_id", lotIds)
+        .order("date_reglement", { ascending: true }),
+      supabase
+        .from("vente_lignes")
+        .select("*")
+        .in("lot_id", lotIds),
+      supabase
+        .from("lot_references")
+        .select("*")
+        .in("lot_id", lotIds),
+    ]);
+    reglements = (regRes.data ?? []) as Reglement[];
+    venteLignes = (lignesRes.data ?? []) as VenteLigne[];
+    lotReferences = (refsRes.data ?? []) as LotReference[];
+  }
+
+  // Fetch bons de commande linked to vente lignes
+  const bdcIds = [...new Set(venteLignes.filter((l) => l.bon_commande_id).map((l) => l.bon_commande_id!))];
+  let bonsCommande: BonCommande[] = [];
+  if (bdcIds.length > 0) {
+    const { data: bdcData } = await supabase
+      .from("bons_commande")
+      .select("*, fonderie:fonderies(nom)")
+      .in("id", bdcIds);
+    bonsCommande = (bdcData ?? []) as BonCommande[];
+  }
+
+  // Fetch bijoux_stock prix_achat for vente bijoux lines (cost basis)
+  const stockIds = [...new Set(venteLignes.filter((l) => l.bijoux_stock_id).map((l) => l.bijoux_stock_id!))];
+  let stockCostMap: Record<string, number> = {};
+  if (stockIds.length > 0) {
+    const { data: stockItems } = await supabase
+      .from("bijoux_stock")
+      .select("id, prix_achat")
+      .in("id", stockIds);
+    stockCostMap = Object.fromEntries((stockItems ?? []).map((s) => [s.id, Number(s.prix_achat) || 0]));
+  }
 
   return (
     <DossierDetailPage
       dossier={dossier as DossierWithClient}
       lots={(lots ?? []) as Lot[]}
       parametres={parametres}
+      documents={(documents ?? []) as DocumentRecord[]}
+      reglements={reglements}
+      venteLignes={venteLignes}
+      lotReferences={lotReferences}
+      bonsCommande={bonsCommande}
+      stockCostMap={stockCostMap}
     />
   );
 }

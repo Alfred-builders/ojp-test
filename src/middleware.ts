@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { OWNER_ONLY_ROUTES, OWNER_ONLY_PREFIXES } from "@/types/auth";
 
 const publicRoutes = [
   "/sign-in",
@@ -14,10 +15,14 @@ const authRoutes = ["/sign-in", "/register", "/forgot-password"];
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !anonKey) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable");
+  }
+
+  const supabase = createServerClient(supabaseUrl, anonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -57,6 +62,43 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     return NextResponse.redirect(url);
+  }
+
+  // Role-based access control for authenticated users
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, status")
+      .eq("id", user.id)
+      .single();
+
+    // Auto-activate pending users on first login (invitation accepted)
+    if (profile && profile.status === "pending") {
+      await supabase
+        .from("profiles")
+        .update({ status: "active" })
+        .eq("id", user.id);
+    }
+
+    // Block inactive users
+    if (profile && profile.status === "inactive") {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/sign-in";
+      return NextResponse.redirect(url);
+    }
+
+    // Block vendeur from owner-only routes
+    if (profile?.role !== "proprietaire") {
+      const isOwnerRoute =
+        OWNER_ONLY_ROUTES.some((r) => pathname === r) ||
+        OWNER_ONLY_PREFIXES.some((r) => pathname.startsWith(r));
+      if (isOwnerRoute) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   return supabaseResponse;

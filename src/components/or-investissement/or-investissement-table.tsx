@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, Coins } from "@phosphor-icons/react";
 import type { OrInvestissement } from "@/types/or-investissement";
 import {
@@ -64,14 +64,22 @@ function SortableHead({
   );
 }
 
-export function OrInvestissementTable({ data }: { data: OrInvestissement[] }) {
+interface OrInvestissementTableProps {
+  data: OrInvestissement[];
+  canEdit?: boolean;
+  totalItems: number;
+  page: number;
+  pageSize: number;
+}
+
+export function OrInvestissementTable({ data, canEdit = true, totalItems, page, pageSize }: OrInvestissementTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [metalFilter, setMetalFilter] = useState<NonNullable<OrInvestissement["metal"]> | null>(null);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -80,6 +88,19 @@ export function OrInvestissementTable({ data }: { data: OrInvestissement[] }) {
       setSortKey(key);
       setSortDir("asc");
     }
+  }
+
+  function navigatePage(newPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(newPage));
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  function navigatePageSize(newSize: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("size", String(newSize));
+    params.set("page", "0");
+    router.push(`${pathname}?${params.toString()}`);
   }
 
   const filtered = useMemo(() => {
@@ -114,19 +135,16 @@ export function OrInvestissementTable({ data }: { data: OrInvestissement[] }) {
     return result;
   }, [data, search, metalFilter, sortKey, sortDir]);
 
-  const totalItems = filtered.length;
-  const paginatedData = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
-
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
       <OrInvestissementToolbar
         search={search}
-        onSearchChange={(v) => { setSearch(v); setCurrentPage(0); }}
+        onSearchChange={setSearch}
         metalFilter={metalFilter}
-        onMetalFilterChange={(v) => { setMetalFilter(v); setCurrentPage(0); }}
+        onMetalFilterChange={setMetalFilter}
       />
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border">
-            <Table className={paginatedData.length === 0 ? "h-full" : ""}>
+      <div className="flex-1 min-h-0 overflow-auto rounded-lg border">
+            <Table className={filtered.length === 0 ? "h-full" : ""}>
               <TableHeader className="sticky top-0 z-10 bg-muted">
                 <TableRow className="bg-transparent hover:bg-transparent">
                   <SortableHead sortKey="designation" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="pl-4">
@@ -154,14 +172,14 @@ export function OrInvestissementTable({ data }: { data: OrInvestissement[] }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedData.length === 0 ? (
+                {filtered.length === 0 ? (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={8} className="h-24 px-4 text-center text-muted-foreground">
                       Aucun produit trouvé.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedData.map((item) => (
+                  filtered.map((item) => (
                     <TableRow
                       key={item.id}
                       className="cursor-pointer bg-white dark:bg-card"
@@ -202,6 +220,7 @@ export function OrInvestissementTable({ data }: { data: OrInvestissement[] }) {
                                 variant="ghost"
                                 size="icon-xs"
                                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                aria-label="Actions"
                               />
                             }
                           >
@@ -217,16 +236,20 @@ export function OrInvestissementTable({ data }: { data: OrInvestissement[] }) {
                               <Eye size={16} weight="duotone" />
                               Voir détail
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation();
-                              }}
-                            >
-                              <Trash size={16} weight="duotone" />
-                              Supprimer
-                            </DropdownMenuItem>
+                            {canEdit && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <Trash size={16} weight="duotone" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -239,9 +262,9 @@ export function OrInvestissementTable({ data }: { data: OrInvestissement[] }) {
       <DataTablePagination
         totalItems={totalItems}
         pageSize={pageSize}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
+        currentPage={page}
+        onPageChange={navigatePage}
+        onPageSizeChange={navigatePageSize}
       />
     </div>
   );

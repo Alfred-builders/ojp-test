@@ -18,6 +18,8 @@ export interface DossierClient {
   last_name: string;
   email: string | null;
   phone: string | null;
+  address: string | null;
+  postal_code: string | null;
   city: string | null;
   is_valid: boolean;
 }

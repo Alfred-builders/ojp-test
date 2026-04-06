@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
 import { fr } from "date-fns/locale"
+import { formatDate } from "@/lib/format"
 import { CalendarBlank } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
@@ -42,7 +42,7 @@ export function DatePicker({
         }
       >
         <CalendarBlank size={16} weight="duotone" className="mr-2" />
-        {value ? format(value, "d MMMM yyyy", { locale: fr }) : placeholder}
+        {value ? formatDate(value.toISOString()) : placeholder}
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar

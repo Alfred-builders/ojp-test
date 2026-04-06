@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Gear, SignOut, UserCircle } from "@phosphor-icons/react";
+import { Gear, SignOut, UserCircle, Book } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -17,6 +17,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
+import type { UserRole } from "@/types/auth";
+
 interface SidebarProfileProps {
   profile: {
     first_name: string | null;
@@ -24,9 +26,11 @@ interface SidebarProfileProps {
     avatar_url: string | null;
   };
   email: string;
+  role: UserRole;
 }
 
-export function SidebarProfile({ profile, email }: SidebarProfileProps) {
+export function SidebarProfile({ profile, email, role }: SidebarProfileProps) {
+  const isOwner = role === "proprietaire";
   const router = useRouter();
 
   const fullName =
@@ -70,16 +74,25 @@ export function SidebarProfile({ profile, email }: SidebarProfileProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56">
             <DropdownMenuItem
-              onSelect={() => router.push("/profile")}
+              onClick={() => router.push("/profile")}
             >
               <UserCircle size={16} weight="duotone" />
               <span>Mon profil</span>
             </DropdownMenuItem>
+            {isOwner && (
+              <DropdownMenuItem
+                onClick={() => router.push("/parametres")}
+              >
+                <Gear size={16} weight="duotone" />
+                <span>Paramètres</span>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => router.push("/parametres")}
+              onClick={() => router.push("/documentation")}
             >
-              <Gear size={16} weight="duotone" />
-              <span>Paramètres</span>
+              <Book size={16} weight="duotone" />
+              <span>Documentation</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

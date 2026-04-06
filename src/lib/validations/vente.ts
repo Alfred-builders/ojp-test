@@ -1,8 +1,6 @@
 export const VENTE_STATUS_OPTIONS = [
   { value: "brouillon", label: "Brouillon" },
   { value: "en_cours", label: "En cours" },
-  { value: "livre", label: "Livré" },
-  { value: "a_regler", label: "À régler" },
   { value: "termine", label: "Terminé" },
   { value: "annule", label: "Annulé" },
 ] as const;

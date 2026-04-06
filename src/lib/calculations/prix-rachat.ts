@@ -1,3 +1,9 @@
+/** Returns 0 for NaN, Infinity, or negative numbers. */
+function safeNum(n: number): number {
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
 /**
  * Calcul du prix de rachat pour les bijoux.
  *
@@ -14,7 +20,7 @@ export function calculerPrixRachatBijoux(
   poids: number,
   coefficientRachat: number
 ): number {
-  return Math.round(coursMetalGramme * (qualite / 1000) * poids * coefficientRachat * 100) / 100;
+  return Math.round(safeNum(coursMetalGramme) * (safeNum(qualite) / 1000) * safeNum(poids) * safeNum(coefficientRachat) * 100) / 100;
 }
 
 /**
@@ -31,7 +37,7 @@ export function calculerPrixRachatOrInvest(
   poids: number,
   coefficient: number
 ): number {
-  return Math.round(coursMetalGramme * poids * coefficient * 100) / 100;
+  return Math.round(safeNum(coursMetalGramme) * safeNum(poids) * safeNum(coefficient) * 100) / 100;
 }
 
 /**

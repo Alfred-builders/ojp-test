@@ -1,3 +1,5 @@
+-- ⚠️  DONNÉES DE TEST UNIQUEMENT — NE PAS EXÉCUTER EN PRODUCTION
+-- Ce fichier contient des données fictives pour le développement local.
 -- Données de test : bijoux réalistes
 INSERT INTO public.bijoux_stock (nom, description, statut, poids, quantite, titrage, metaux, qualite, prix_achat, prix_revente, date_creation) VALUES
   ('Bague solitaire diamant', 'Bague solitaire en or jaune 18 carats sertie d''un diamant 0.30ct, taille 54', 'en_stock', 3.2, 1, '18K', 'Or', '750', 420.00, 580.00, '2025-11-15 10:00:00+01'),

@@ -1,3 +1,5 @@
+-- ⚠️  DONNÉES DE TEST UNIQUEMENT — NE PAS EXÉCUTER EN PRODUCTION
+-- Ce fichier contient des données fictives pour le développement local.
 -- Seed data : dossiers de test pour Or au Juste Prix
 -- Note: le numéro est généré automatiquement par le trigger, on passe une valeur vide
 INSERT INTO public.dossiers (numero, client_id, status, notes, created_by) VALUES

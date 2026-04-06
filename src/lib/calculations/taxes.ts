@@ -1,10 +1,16 @@
+/** Returns 0 for NaN, Infinity, or negative numbers. */
+function safeNum(n: number): number {
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
 /**
  * Calcul de la TMP (Taxe sur les Métaux Précieux).
  * Taux fixe de 11.5% sur le montant total de la transaction.
  * Toujours applicable, sans condition.
  */
 export function calculerTMP(prixAchat: number): number {
-  return Math.round(prixAchat * 0.115 * 100) / 100;
+  return Math.round(safeNum(prixAchat) * 0.115 * 100) / 100;
 }
 
 /**
@@ -46,13 +52,19 @@ export function calculerTPV(
   prixAcquisition: number,
   dateAcquisition: string
 ): number {
-  const plusValue = prixAchat - prixAcquisition;
+  const plusValue = safeNum(prixAchat) - safeNum(prixAcquisition);
   if (plusValue <= 0) return 0;
 
-  const acquisitionDate = new Date(dateAcquisition);
+  const acq = new Date(dateAcquisition);
+  if (isNaN(acq.getTime())) return 0;
   const now = new Date();
-  const diffMs = now.getTime() - acquisitionDate.getTime();
-  const years = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
+  let years = now.getFullYear() - acq.getFullYear();
+  if (
+    now.getMonth() < acq.getMonth() ||
+    (now.getMonth() === acq.getMonth() && now.getDate() < acq.getDate())
+  ) {
+    years--;
+  }
 
   if (years >= 22) return 0;
 
@@ -67,7 +79,9 @@ export function calculerTPV(
   const tauxIR = 0.19 * (1 - abatementIR / 100);
   const tauxSocial = 0.172 * (1 - abatementSocial / 100);
 
-  return Math.round(plusValue * (tauxIR + tauxSocial) * 100) / 100;
+  const montantIR = Math.round(plusValue * tauxIR * 100) / 100;
+  const montantSocial = Math.round(plusValue * tauxSocial * 100) / 100;
+  return montantIR + montantSocial;
 }
 
 /**

@@ -47,14 +47,8 @@ import { clientSchema, LEAD_SOURCE_OPTIONS } from "@/lib/validations/client";
 import { IdentityDocumentSection } from "@/components/clients/identity-document-form";
 import type { Client, ClientIdentityDocument } from "@/types/client";
 import type { Dossier } from "@/types/dossier";
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(dateStr));
-}
+import { DocumentsTable } from "@/components/documents/documents-table";
+import { formatDate } from "@/lib/format";
 
 function DetailRow({
   label,
@@ -64,6 +58,7 @@ function DetailRow({
   onEditChange,
   type = "text",
   editContent,
+  noBorder,
 }: {
   label: string;
   value: React.ReactNode;
@@ -72,9 +67,10 @@ function DetailRow({
   onEditChange?: (val: string) => void;
   type?: string;
   editContent?: React.ReactNode;
+  noBorder?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b last:border-0">
+    <div className={`flex items-center justify-between py-2 ${noBorder ? "" : "border-b last:border-0"}`}>
       <span className="text-muted-foreground">{label}</span>
       {editing && editContent ? (
         editContent
@@ -96,10 +92,12 @@ export function ClientDetailPage({
   client,
   identityDocuments,
   dossiers,
+  pdfDocuments,
 }: {
   client: Client;
   identityDocuments: ClientIdentityDocument[];
   dossiers: Dossier[];
+  pdfDocuments?: import("@/types/document").DocumentRecord[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -193,7 +191,7 @@ export function ClientDetailPage({
         title={displayName}
         backAction={
           <Link href="/clients">
-            <Button variant="ghost" size="icon-sm">
+            <Button variant="ghost" size="icon-sm" aria-label="Retour">
               <ArrowLeft size={16} weight="regular" />
             </Button>
           </Link>
@@ -202,7 +200,7 @@ export function ClientDetailPage({
         {editing ? (
           <Button size="sm" disabled={saving} onClick={handleSave}>
             <FloppyDisk size={16} weight="duotone" />
-            {saving ? "Sauvegarde..." : "Sauvegarder"}
+            {saving ? "Enregistrement..." : "Enregistrer"}
           </Button>
         ) : (
           <Button size="sm" onClick={() => setEditing(true)}>
@@ -218,7 +216,7 @@ export function ClientDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PhUser size={20} weight="duotone" />
-                Informations personnelles
+                Informations
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -243,25 +241,23 @@ export function ClientDetailPage({
               <DetailRow label="Nom" value={client.last_name} editing={editing} editValue={lastName} onEditChange={setLastName} />
               {errors.last_name && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1">{errors.last_name}</p>}
               <DetailRow label="Nom de jeune fille" value={client.maiden_name ?? "—"} editing={editing} editValue={maidenName} onEditChange={setMaidenName} />
-              <div className="grid grid-cols-2 gap-4 py-2 border-b last:border-0">
-                <div>
-                  <span className="text-muted-foreground text-sm">Email</span>
-                  {editing ? (
-                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" />
-                  ) : (
-                    <p className="font-medium text-sm mt-0.5">{client.email ? <CopyableText value={client.email} /> : "—"}</p>
-                  )}
-                  {errors.email && editing && <p className="text-xs text-destructive mt-0.5">{errors.email}</p>}
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">Téléphone</span>
-                  {editing ? (
-                    <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" />
-                  ) : (
-                    <p className="font-medium text-sm mt-0.5">{client.phone ? <CopyableText value={client.phone} /> : "—"}</p>
-                  )}
-                </div>
-              </div>
+              <DetailRow
+                label="Email"
+                value={client.email ? <CopyableText value={client.email} /> : "—"}
+                editing={editing}
+                editContent={
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                }
+              />
+              {errors.email && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1">{errors.email}</p>}
+              <DetailRow
+                label="Téléphone"
+                value={client.phone ? <CopyableText value={client.phone} /> : "—"}
+                editing={editing}
+                editContent={
+                  <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                }
+              />
             </CardContent>
           </Card>
 
@@ -361,6 +357,45 @@ export function ClientDetailPage({
             )}
           </div>
 
+          {/* Documents du client */}
+          <div className="md:col-span-3">
+            <DocumentsTable documents={pdfDocuments ?? []} />
+          </div>
+
+          {/* Notes */}
+          <Card className="md:col-span-3">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <PhNotePencil size={20} weight="duotone" />
+                Notes
+              </CardTitle>
+              {editingNotes ? (
+                <Button variant="secondary" size="sm" disabled={saving} onClick={handleSaveNotes}>
+                  <FloppyDisk size={14} weight="duotone" />
+                  {saving ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+              ) : (
+                <Button variant="ghost" size="icon-sm" onClick={() => setEditingNotes(true)} aria-label="Modifier les notes">
+                  <PencilSimple size={16} weight="duotone" />
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {editingNotes ? (
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Notes sur le client..."
+                  className="min-h-[150px] resize-none"
+                />
+              ) : (
+                <p className="text-sm whitespace-pre-wrap">
+                  {client.notes ?? "Aucune note."}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Informations complémentaires */}
           <Card className="md:col-span-3">
             <CardHeader>
@@ -370,8 +405,8 @@ export function ClientDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
+              <div className="grid grid-cols-2 divide-x">
+                <div className="pr-4">
                   <DetailRow
                     label="Source"
                     value={client.lead_source ?? "—"}
@@ -391,43 +426,11 @@ export function ClientDetailPage({
                       </Select>
                     }
                   />
+                </div>
+                <div className="pl-4">
                   <DetailRow label="Date de création" value={formatDate(client.created_at)} />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Notes */}
-          <Card className="md:col-span-3">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <PhNotePencil size={20} weight="duotone" />
-                Notes
-              </CardTitle>
-              {editingNotes ? (
-                <Button variant="secondary" size="sm" disabled={saving} onClick={handleSaveNotes}>
-                  <FloppyDisk size={14} weight="duotone" />
-                  {saving ? "Sauvegarde..." : "Sauvegarder"}
-                </Button>
-              ) : (
-                <Button variant="ghost" size="icon-sm" onClick={() => setEditingNotes(true)}>
-                  <PencilSimple size={16} weight="duotone" />
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {editingNotes ? (
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Notes sur le client..."
-                  className="min-h-[150px] resize-none"
-                />
-              ) : (
-                <p className="text-sm whitespace-pre-wrap">
-                  {client.notes ?? "Aucune note."}
-                </p>
-              )}
             </CardContent>
           </Card>
         </div>

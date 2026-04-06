@@ -29,11 +29,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Header } from "@/components/dashboard/header";
+import { formatDate, formatCurrency } from "@/lib/format";
 import type { OrInvestissement } from "@/types/or-investissement";
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(dateStr));
-}
 
 function DetailRow({
   label,
@@ -71,7 +68,7 @@ function DetailRow({
   );
 }
 
-export function OrInvestissementDetailPage({ item }: { item: OrInvestissement }) {
+export function OrInvestissementDetailPage({ item, canEdit = true }: { item: OrInvestissement; canEdit?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -117,10 +114,6 @@ export function OrInvestissementDetailPage({ item }: { item: OrInvestissement })
   const prixRachat = cours * poidsNum * (titreNum / 1000) * coeffRachat;
   const prixVente = cours * poidsNum * (titreNum / 1000) * coeffVente;
 
-  function formatCurrency(value: number) {
-    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
-  }
-
   async function handleSave() {
     setSaving(true);
     const supabase = createClient();
@@ -148,22 +141,24 @@ export function OrInvestissementDetailPage({ item }: { item: OrInvestissement })
         title={item.designation}
         backAction={
           <Link href="/or-investissement">
-            <Button variant="ghost" size="icon-sm">
+            <Button variant="ghost" size="icon-sm" aria-label="Retour">
               <ArrowLeft size={16} weight="regular" />
             </Button>
           </Link>
         }
       >
-        {editing ? (
-          <Button size="sm" disabled={saving} onClick={handleSave}>
-            <FloppyDisk size={16} weight="duotone" />
-            {saving ? "Sauvegarde..." : "Sauvegarder"}
-          </Button>
-        ) : (
-          <Button size="sm" onClick={() => setEditing(true)}>
-            <PencilSimple size={16} weight="duotone" />
-            Modifier
-          </Button>
+        {canEdit && (
+          editing ? (
+            <Button size="sm" disabled={saving} onClick={handleSave}>
+              <FloppyDisk size={16} weight="duotone" />
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setEditing(true)}>
+              <PencilSimple size={16} weight="duotone" />
+              Modifier
+            </Button>
+          )
         )}
       </Header>
       <div className="flex-1 overflow-y-auto p-6">
@@ -173,7 +168,7 @@ export function OrInvestissementDetailPage({ item }: { item: OrInvestissement })
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PhInfo size={20} weight="duotone" />
-                Informations produit
+                Informations
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -242,7 +237,7 @@ export function OrInvestissementDetailPage({ item }: { item: OrInvestissement })
             </CardHeader>
             <CardContent>
               <DetailRow label="Quantité" value={item.quantite} editing={editing} editValue={quantite} onEditChange={setQuantite} type="number" />
-              <DetailRow label="Dernière mise à jour" value={formatDate(item.updated_at)} />
+              <DetailRow label="Dernière modification" value={formatDate(item.updated_at)} />
             </CardContent>
           </Card>
         </div>

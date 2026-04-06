@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LotDetailPage } from "@/components/lots/lot-detail-page";
 import type { LotWithReferences, LotReference } from "@/types/lot";
+import type { DocumentRecord } from "@/types/document";
+import type { Reglement } from "@/types/reglement";
 
 export default async function DepotVenteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,6 +24,18 @@ export default async function DepotVenteDetailPage({ params }: { params: Promise
     .eq("lot_id", id)
     .order("created_at", { ascending: true });
 
+  const { data: documents } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("lot_id", id)
+    .order("created_at", { ascending: false });
+
+  const { data: reglements } = await supabase
+    .from("reglements")
+    .select("*")
+    .eq("lot_id", id)
+    .order("date_reglement", { ascending: true });
+
   const lotWithRefs: LotWithReferences & { dossier: typeof lot.dossier } = {
     ...lot,
     references: (references ?? []) as LotReference[],
@@ -33,6 +47,8 @@ export default async function DepotVenteDetailPage({ params }: { params: Promise
       orInvestCatalog={[]}
       typeLabel="Dépôt-vente"
       backHref="/depot-vente"
+      documents={(documents ?? []) as DocumentRecord[]}
+      reglements={(reglements ?? []) as Reglement[]}
     />
   );
 }

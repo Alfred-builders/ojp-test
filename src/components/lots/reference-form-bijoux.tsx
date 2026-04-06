@@ -25,6 +25,7 @@ import {
   calculerPrixRachatBijoux,
   getCoursMetalFromSnapshot,
 } from "@/lib/calculations/prix-rachat";
+import { formatCurrency } from "@/lib/format";
 import type { LotReference } from "@/types/lot";
 
 interface ReferenceFormBijouxProps {
@@ -37,6 +38,7 @@ interface ReferenceFormBijouxProps {
   onClose: () => void;
   editData?: LotReference;
   lotType?: "rachat" | "depot_vente";
+  commissionDvPct?: number;
 }
 
 export function ReferenceFormBijoux({
@@ -49,6 +51,7 @@ export function ReferenceFormBijoux({
   onClose,
   editData,
   lotType = "rachat",
+  commissionDvPct = 40,
 }: ReferenceFormBijouxProps) {
   const isDepotVente = lotType === "depot_vente";
   const isEdit = !!editData;
@@ -83,10 +86,11 @@ export function ReferenceFormBijoux({
 
   const prixVenteCalcule = useMemo(() => {
     if (isDepotVente) {
-      // Depot-vente: prix_revente = prix_achat × 1.4
+      // Depot-vente: prix_revente = prix_achat × (1 + commission%)
       const basePrix = prixAchatManuel ? parseFloat(prixAchatManuel) : prixCalcule;
       if (basePrix === null || isNaN(basePrix)) return null;
-      return Math.round(basePrix * 1.4 * 100) / 100;
+      const markup = 1 + commissionDvPct / 100;
+      return Math.round(basePrix * markup * 100) / 100;
     }
     if (!metal || !qualite || !poids) return null;
     const coursMetalGramme = getCoursMetalFromSnapshot(
@@ -101,7 +105,7 @@ export function ReferenceFormBijoux({
       parseFloat(poids),
       coefficientVenteSnapshot
     );
-  }, [metal, qualite, poids, coursOrSnapshot, coursArgentSnapshot, coursPlatineSnapshot, coefficientVenteSnapshot, isDepotVente, prixAchatManuel, prixCalcule]);
+  }, [metal, qualite, poids, coursOrSnapshot, coursArgentSnapshot, coursPlatineSnapshot, coefficientVenteSnapshot, isDepotVente, prixAchatManuel, prixCalcule, commissionDvPct]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -159,18 +163,14 @@ export function ReferenceFormBijoux({
     router.refresh();
   }
 
-  function formatCurrency(amount: number) {
-    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount);
-  }
-
   return (
     <Card className="border-border bg-white dark:bg-card">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Diamond size={16} weight="duotone" />
-          {isEdit ? `Modifier — ${editData.designation}` : "Ajouter un bijoux"}
+          {isEdit ? `Modifier — ${editData.designation}` : "Ajouter un bijou"}
         </CardTitle>
-        <Button variant="ghost" size="icon-xs" onClick={onClose}>
+        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Fermer">
           <X size={14} weight="regular" />
         </Button>
       </CardHeader>
@@ -323,7 +323,7 @@ export function ReferenceFormBijoux({
             </Button>
             <Button type="submit" size="sm" disabled={saving}>
               <FloppyDisk size={16} weight="duotone" />
-              {saving ? "Sauvegarde..." : isEdit ? "Enregistrer" : "Ajouter"}
+              {saving ? "Enregistrement..." : isEdit ? "Enregistrer" : "Ajouter"}
             </Button>
           </div>
         </form>

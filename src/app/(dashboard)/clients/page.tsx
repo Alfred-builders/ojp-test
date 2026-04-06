@@ -6,13 +6,28 @@ import { ClientTable } from "@/components/clients/client-table";
 import { Button } from "@/components/ui/button";
 import type { Client } from "@/types/client";
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; size?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(0, parseInt(params.page ?? "0"));
+  const size = Math.max(1, parseInt(params.size ?? "20"));
+  const from = page * size;
+  const to = from + size - 1;
+
   const supabase = await createClient();
+
+  const { count } = await supabase
+    .from("clients")
+    .select("*", { count: "exact", head: true });
 
   const { data } = await supabase
     .from("clients")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   const clients = (data ?? []) as Client[];
 
@@ -29,7 +44,7 @@ export default async function ClientsPage() {
         </Link>
       }
     >
-      <ClientTable data={clients} />
+      <ClientTable data={clients} totalItems={count ?? 0} page={page} pageSize={size} />
     </PageWrapper>
   );
 }

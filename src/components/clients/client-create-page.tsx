@@ -136,7 +136,7 @@ export function ClientCreatePage() {
         title="Nouveau client"
         backAction={
           <Link href="/clients">
-            <Button variant="ghost" size="icon-sm">
+            <Button variant="ghost" size="icon-sm" aria-label="Retour">
               <ArrowLeft size={16} weight="regular" />
             </Button>
           </Link>

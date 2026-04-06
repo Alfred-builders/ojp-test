@@ -23,9 +23,9 @@ function Doc({ data }: { data: ContratRachatData }) {
       h(View, { style: s.header },
         h(Image, { style: s.logo, src: LOGO_BASE64 }),
         h(View, { style: s.headerRight },
-          h(Text, { style: s.companyName }, "L'OR AU JUSTE PRIX"),
-          h(Text, { style: s.companyLine }, "4 Grande Rue, 74160 St Julien en Genevois"),
-          h(Text, { style: s.companyLine }, "06 78 87 75 78"))),
+          h(Text, { style: s.companyName }, SOCIETE.nom.toUpperCase()),
+          h(Text, { style: s.companyLine }, SOCIETE.adresse),
+          h(Text, { style: s.companyLine }, SOCIETE.telephone))),
       h(View, { style: s.infoSection },
         h(View, { style: s.clientBlock },
           h(Text, { style: s.label }, "CLIENT"),
@@ -75,8 +75,8 @@ function Doc({ data }: { data: ContratRachatData }) {
         h(Text, { style: s.condTitle }, "CONDITIONS G\u00C9N\u00C9RALES DU CONTRAT"),
         h(Text, { style: s.condBody }, TEXTE_CONDITIONS_CONTRAT)),
       h(View, { style: s.footer, fixed: true },
-        h(Text, { style: s.footerText }, "L'Or au Juste Prix  \u00B7  SAS au capital de 5 000,00\u20AC"),
-        h(Text, { style: s.footerText }, "4 Grande Rue 74160 St Julien en Genevois  \u00B7  06 78 87 75 78"))),
+        h(Text, { style: s.footerText }, `${SOCIETE.nom}  \u00B7  ${SOCIETE.details}`),
+        h(Text, { style: s.footerText }, `${SOCIETE.adresse}  \u00B7  ${SOCIETE.telephone}`))),
 
     // Page 2: Bordereau de rétractation
     h(Page, { size: "A4", style: s.page },
@@ -102,11 +102,10 @@ function Doc({ data }: { data: ContratRachatData }) {
           h(Text, { style: s.sigLabel }, "Signature du client :"),
           h(View, { style: { borderBottomWidth: 0.5, borderBottomColor: "#1A1A1A", width: 150, marginTop: 25 } }))),
       h(View, { style: s.footer, fixed: true },
-        h(Text, { style: s.footerText }, "L'Or au Juste Prix  \u00B7  SAS au capital de 5 000,00\u20AC"),
-        h(Text, { style: s.footerText }, "4 Grande Rue 74160 St Julien en Genevois  \u00B7  06 78 87 75 78"))));
+        h(Text, { style: s.footerText }, `${SOCIETE.nom}  \u00B7  ${SOCIETE.details}`),
+        h(Text, { style: s.footerText }, `${SOCIETE.adresse}  \u00B7  ${SOCIETE.telephone}`))));
 }
 
 export async function generateContratRachat(data: ContratRachatData): Promise<Blob> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return await pdf(React.createElement(Doc, { data }) as any).toBlob();
+  return await pdf(React.createElement(Doc, { data }) as React.ReactElement<never>).toBlob();
 }

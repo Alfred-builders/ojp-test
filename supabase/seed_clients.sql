@@ -1,3 +1,5 @@
+-- ⚠️  DONNÉES DE TEST UNIQUEMENT — NE PAS EXÉCUTER EN PRODUCTION
+-- Ce fichier contient des données fictives pour le développement local.
 -- Seed data : clients de test pour Or au Juste Prix
 INSERT INTO public.clients (civility, first_name, last_name, maiden_name, email, phone, address, city, postal_code, country, lead_source, notes) VALUES
 ('M', 'Jean', 'Dupont', NULL, 'jean.dupont@email.fr', '06 12 34 56 78', '12 rue de la Paix', 'Paris', '75002', 'France', 'Bouche à oreille', 'Client fidèle depuis 2022'),

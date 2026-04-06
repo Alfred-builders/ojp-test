@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Diamond, Coins, Lightning, FileText, DotsThree, PencilSimple, Trash, WarningCircle, ArrowUUpLeft, CheckCircle, XCircle, Timer, Stamp, ArrowCounterClockwise } from "@phosphor-icons/react";
+import Link from "next/link";
+import { Diamond, Coins, Lightning, FileText, DotsThree, PencilSimple, Trash, WarningCircle, ArrowUUpLeft, CheckCircle, XCircle, Timer, Stamp, ArrowCounterClockwise, ArrowSquareOut } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,40 +14,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
-import type { LotReference, ReferenceStatus } from "@/types/lot";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(amount);
-}
-
-const REF_STATUS_CONFIG: Record<ReferenceStatus, { label: string; className: string }> = {
-  en_expertise: { label: "En expertise", className: "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-800" },
-  expertise_ok: { label: "Expertisé", className: "bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/30" },
-  bloque: { label: "Bloqué (48h)", className: "bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/30" },
-  route_stock: { label: "Stock boutique", className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30" },
-  route_fonderie: { label: "Fonderie", className: "bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/30" },
-  route_depot_vente: { label: "Dépôt-vente", className: "bg-cyan-100 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/30" },
-  retracte: { label: "Rétracté", className: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30" },
-  en_depot_vente: { label: "En dépôt-vente", className: "bg-cyan-100 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/30" },
-  vendu: { label: "Vendu", className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30" },
-  rendu_client: { label: "Rendu client", className: "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-800" },
-  devis_envoye: { label: "Devis envoyé", className: "bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/30" },
-  devis_accepte: { label: "Devis accepté", className: "bg-cyan-100 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/30" },
-  devis_refuse: { label: "Devis refusé", className: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30" },
-  en_retractation: { label: "En rétractation", className: "bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/30" },
-  finalise: { label: "Finalisé", className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30" },
-};
+import { formatCurrency } from "@/lib/format";
+import { REF_STATUS_CONFIG } from "@/components/references/reference-status-config";
+import type { LotReference } from "@/types/lot";
 
 interface ReferenceCardProps {
   reference: LotReference;
@@ -82,7 +58,14 @@ export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onVali
       {/* Info principale */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm truncate">{reference.designation}</span>
+          <Link
+            href={`/references/${reference.id}`}
+            className="inline-flex items-center gap-1 font-medium text-sm truncate text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {reference.designation}
+            <ArrowSquareOut size={12} weight="regular" className="shrink-0" />
+          </Link>
           {!hideTypeRachat && (
             <Badge variant="outline" className={reference.type_rachat === "devis" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800" : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"}>
               {reference.type_rachat === "devis" ? (
@@ -173,10 +156,10 @@ export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onVali
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button variant="ghost" size="icon-xs" />
+                <Button variant="ghost" size="icon-xs" aria-label="Actions" />
               }
             >
-              <DotsThree size={16} weight="bold" />
+              <DotsThree size={16} weight="regular" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {onEdit && (

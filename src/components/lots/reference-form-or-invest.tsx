@@ -16,8 +16,9 @@ import {
   Lightning,
   FileText,
 } from "@phosphor-icons/react";
-import { format, parse } from "date-fns";
+import { parse } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
+import { mutate } from "@/lib/supabase/mutation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,11 +46,8 @@ import {
   regimeFiscalOptimal,
 } from "@/lib/calculations/taxes";
 import type { OrInvestissement } from "@/types/or-investissement";
+import { formatCurrency, formatDateISO } from "@/lib/format";
 import type { LotReference } from "@/types/lot";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount);
-}
 
 interface ReferenceFormOrInvestProps {
   lotId: string;
@@ -100,13 +98,16 @@ export function ReferenceFormOrInvest({
 
           // Mettre à jour les snapshots du lot
           const supabase2 = createClient();
-          await supabase2.from("lots").update({
-            cours_or_snapshot: data.prix_or,
-            cours_argent_snapshot: data.prix_argent,
-            cours_platine_snapshot: data.prix_platine,
-            coefficient_rachat_snapshot: data.coefficient_rachat,
-            coefficient_vente_snapshot: data.coefficient_vente,
-          }).eq("id", lotId);
+          await mutate(
+            supabase2.from("lots").update({
+              cours_or_snapshot: data.prix_or,
+              cours_argent_snapshot: data.prix_argent,
+              cours_platine_snapshot: data.prix_platine,
+              coefficient_rachat_snapshot: data.coefficient_rachat,
+              coefficient_vente_snapshot: data.coefficient_vente,
+            }).eq("id", lotId),
+            "Erreur lors de la mise à jour des cours du lot"
+          );
         }
       }
       fetchParametres();
@@ -138,21 +139,20 @@ export function ReferenceFormOrInvest({
 
   const metal = selectedItem?.metal as "Or" | "Argent" | "Platine" | null;
   const poids = selectedItem?.poids ?? 0;
-  const titre = selectedItem?.titre ? parseFloat(selectedItem.titre) : null;
 
   const qty = parseInt(quantite) || 1;
 
-  const prixRachat = useMemo(() => {
+  const prixRachat = (() => {
     if (!metal || !poids) return null;
     const cours = getCoursMetalFromSnapshot(metal, liveCoursOr, liveCoursArgent, liveCoursPlatine);
-    return calculerPrixRachatOrInvest(cours, poids, liveCoeffRachat) * qty;
-  }, [metal, poids, liveCoursOr, liveCoursArgent, liveCoursPlatine, liveCoeffRachat, qty]);
+    return Math.round(calculerPrixRachatOrInvest(cours, poids, liveCoeffRachat) * qty * 100) / 100;
+  })();
 
-  const prixVente = useMemo(() => {
+  const prixVente = (() => {
     if (!metal || !poids) return null;
     const cours = getCoursMetalFromSnapshot(metal, liveCoursOr, liveCoursArgent, liveCoursPlatine);
-    return calculerPrixRachatOrInvest(cours, poids, liveCoeffVente) * qty;
-  }, [metal, poids, liveCoursOr, liveCoursArgent, liveCoursPlatine, liveCoeffVente, qty]);
+    return Math.round(calculerPrixRachatOrInvest(cours, poids, liveCoeffVente) * qty * 100) / 100;
+  })();
 
   const tpvEligible = isTPVEligible(
     hasFacture,
@@ -232,7 +232,7 @@ export function ReferenceFormOrInvest({
           <Coins size={16} weight="duotone" />
           {isEdit ? `Modifier — ${editData.designation}` : "Ajouter de l\u0027or investissement"}
         </CardTitle>
-        <Button variant="ghost" size="icon-xs" onClick={onClose}>
+        <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Fermer">
           <X size={14} weight="regular" />
         </Button>
       </CardHeader>
@@ -374,7 +374,7 @@ export function ReferenceFormOrInvest({
                 <Label>Date d&apos;acquisition</Label>
                 <DatePicker
                   value={dateAcquisition ? parse(dateAcquisition, "yyyy-MM-dd", new Date()) : undefined}
-                  onChange={(d) => setDateAcquisition(d ? format(d, "yyyy-MM-dd") : "")}
+                  onChange={(d) => setDateAcquisition(d ? formatDateISO(d) : "")}
                 />
               </div>
               <div className="space-y-2">
@@ -461,7 +461,7 @@ export function ReferenceFormOrInvest({
             </Button>
             <Button type="submit" size="sm" disabled={saving}>
               <FloppyDisk size={16} weight="duotone" />
-              {saving ? "Sauvegarde..." : isEdit ? "Enregistrer" : "Ajouter"}
+              {saving ? "Enregistrement..." : isEdit ? "Enregistrer" : "Ajouter"}
             </Button>
           </div>
         </form>

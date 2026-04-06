@@ -17,6 +17,9 @@ const statutOptions: { value: BijouxStock["statut"]; label: string }[] = [
   { value: "vendu", label: "Vendu" },
   { value: "reserve", label: "Réservé" },
   { value: "rendu_client", label: "Rendu client" },
+  { value: "en_reparation", label: "En réparation" },
+  { value: "fondu", label: "Fondu" },
+  { value: "a_fondre", label: "À fondre" },
 ];
 
 const metauxOptions: { value: NonNullable<BijouxStock["metaux"]>; label: string }[] = [

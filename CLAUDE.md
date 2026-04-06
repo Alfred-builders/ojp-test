@@ -65,6 +65,12 @@ src/
   ```
   Les credentials sont dans `.env.local` (`SUPABASE_SERVICE_ROLE_KEY` pour bypass RLS)
 
+## Carnet d'idees (IDEES.md)
+
+- L'utilisateur peut demander de **noter une idee** → l'ajouter dans `IDEES.md` sous la section appropriee (en creer une si besoin)
+- Ce fichier est **purement personnel** : ne JAMAIS s'en servir pour guider un developpement, ne JAMAIS implementer une idee sauf demande explicite
+- `IDEES.md` est dans le `.gitignore`
+
 ## Git Workflow
 
 - **Ne JAMAIS push directement sur `main`** sauf demande explicite de l'utilisateur

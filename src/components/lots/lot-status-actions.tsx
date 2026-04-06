@@ -11,8 +11,13 @@ import {
   ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
+import { mutate } from "@/lib/supabase/mutation";
+import { getSettingClient } from "@/lib/settings-client";
+import { triggerEmail } from "@/lib/email/trigger";
 import { Button } from "@/components/ui/button";
 import type { LotWithReferences } from "@/types/lot";
+
+const DEFAULT_RETRACTATION_HEURES = 48;
 
 interface LotStatusActionsProps {
   lot: LotWithReferences;
@@ -21,21 +26,33 @@ interface LotStatusActionsProps {
 export function LotStatusActions({ lot }: LotStatusActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [retractationMs, setRetractationMs] = useState(DEFAULT_RETRACTATION_HEURES * 3600_000);
+
+  useEffect(() => {
+    getSettingClient("business_rules").then((rules) => {
+      if (rules) setRetractationMs(rules.retractation_heures * 3600_000);
+    });
+  }, []);
 
   const supabase = createClient();
 
   async function updateLotStatus(updates: Record<string, unknown>) {
     setLoading(true);
-    await supabase.from("lots").update(updates).eq("id", lot.id);
+    const { error } = await mutate(
+      supabase.from("lots").update(updates).eq("id", lot.id),
+      "Erreur lors de la mise à jour du statut du lot"
+    );
     setLoading(false);
+    if (error) return;
     router.refresh();
   }
 
   async function updateAllReferencesStatus(status: string) {
-    await supabase
-      .from("lot_references")
-      .update({ status })
-      .eq("lot_id", lot.id);
+    const { error } = await mutate(
+      supabase.from("lot_references").update({ status }).eq("lot_id", lot.id),
+      "Erreur lors de la mise à jour des références"
+    );
+    return { error };
   }
 
   // Brouillon → Enregistrer
@@ -46,13 +63,17 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
         disabled={loading}
         onClick={async () => {
           setLoading(true);
-          await supabase.from("lots").update({ updated_at: new Date().toISOString() }).eq("id", lot.id);
+          const { error } = await mutate(
+            supabase.from("lots").update({ updated_at: new Date().toISOString() }).eq("id", lot.id),
+            "Erreur lors de l'enregistrement du lot"
+          );
           setLoading(false);
+          if (error) return;
           router.push(`/dossiers/${lot.dossier_id}`);
         }}
       >
         <FloppyDisk size={16} weight="duotone" />
-        {loading ? "Sauvegarde..." : "Enregistrer"}
+        {loading ? "Enregistrement..." : "Enregistrer"}
       </Button>
     );
   }
@@ -67,12 +88,18 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
           onClick={async () => {
             setLoading(true);
             const now = new Date();
-            const retractEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-            await updateAllReferencesStatus("bloque");
+            const retractEnd = new Date(now.getTime() + retractationMs);
+            const { error } = await updateAllReferencesStatus("bloque");
+            if (error) { setLoading(false); return; }
             await updateLotStatus({
               status: "en_retractation",
               date_acceptation: now.toISOString(),
               date_fin_retractation: retractEnd.toISOString(),
+            });
+            triggerEmail({
+              notification_type: "interne_devis_accepte",
+              lot_id: lot.id,
+              dossier_id: lot.dossier_id,
             });
           }}
         >
@@ -110,6 +137,7 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
           onClick={async () => {
             setLoading(true);
 
+            let hasError = false;
             for (const ref of lot.references) {
               if (ref.categorie === "bijoux") {
                 // Create stock entry for bijoux
@@ -134,40 +162,64 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
                   }
                 }
 
-                const { data: stockEntry } = await supabase
-                  .from("bijoux_stock")
-                  .insert(stockPayload)
-                  .select("id")
-                  .single();
+                const { data: stockEntry, error: stockError } = await mutate(
+                  supabase
+                    .from("bijoux_stock")
+                    .insert(stockPayload)
+                    .select("id")
+                    .single(),
+                  "Erreur lors de la création de l'entrée stock bijoux"
+                );
+                if (stockError) { hasError = true; break; }
 
                 if (stockEntry) {
-                  await supabase
-                    .from("lot_references")
-                    .update({
-                      status: isDepotVente ? "en_depot_vente" : "route_stock",
-                      destination_stock_id: stockEntry.id,
-                    })
-                    .eq("id", ref.id);
+                  const { error: refError } = await mutate(
+                    supabase
+                      .from("lot_references")
+                      .update({
+                        status: isDepotVente ? "en_depot_vente" : "route_stock",
+                        destination_stock_id: stockEntry.id,
+                      })
+                      .eq("id", ref.id),
+                    "Erreur lors de la mise à jour de la référence vers le stock"
+                  );
+                  if (refError) { hasError = true; break; }
                 }
               }
 
               if (ref.categorie === "or_investissement" && ref.or_investissement_id) {
                 // Increment or_investissement quantity
-                await supabase.rpc("increment_or_invest_quantite", {
-                  p_id: ref.or_investissement_id,
-                  p_qty: ref.quantite,
-                });
+                const { error: rpcError } = await mutate(
+                  supabase.rpc("increment_or_invest_quantite", {
+                    p_id: ref.or_investissement_id,
+                    p_qty: ref.quantite,
+                  }),
+                  "Erreur lors de l'incrémentation du stock or investissement"
+                );
+                if (rpcError) { hasError = true; break; }
 
-                await supabase
-                  .from("lot_references")
-                  .update({ status: "route_stock" })
-                  .eq("id", ref.id);
+                const { error: refError } = await mutate(
+                  supabase
+                    .from("lot_references")
+                    .update({ status: "route_stock" })
+                    .eq("id", ref.id),
+                  "Erreur lors de la mise à jour du statut de la référence"
+                );
+                if (refError) { hasError = true; break; }
               }
             }
+
+            if (hasError) { setLoading(false); return; }
 
             await updateLotStatus({
               status: "finalise",
               date_finalisation: new Date().toISOString(),
+            });
+            // Notify: rachat finalized (PDFs already generated at dossier finalization)
+            triggerEmail({
+              notification_type: "contrat_rachat_finalise",
+              lot_id: lot.id,
+              dossier_id: lot.dossier_id,
             });
           }}
         >
@@ -180,8 +232,14 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
           disabled={loading}
           onClick={async () => {
             setLoading(true);
-            await updateAllReferencesStatus("retracte");
+            const { error } = await updateAllReferencesStatus("retracte");
+            if (error) { setLoading(false); return; }
             await updateLotStatus({ status: "retracte" });
+            triggerEmail({
+              notification_type: "interne_retractation",
+              lot_id: lot.id,
+              dossier_id: lot.dossier_id,
+            });
           }}
         >
           <ArrowCounterClockwise size={16} weight="duotone" />

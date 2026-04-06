@@ -24,21 +24,7 @@ import { VenteStatusBadge } from "@/components/ventes/vente-status-badge";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
 import { MagnifyingGlass } from "@phosphor-icons/react";
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(dateStr));
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(amount);
-}
+import { formatDate, formatCurrency } from "@/lib/format";
 
 type SortKey = "numero" | "client" | "status" | "total_prix_revente" | "created_at";
 type SortDir = "asc" | "desc";
@@ -133,7 +119,7 @@ export function CommandeTable({ data }: { data: LotWithDossier[] }) {
   const paginatedData = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
       <div className="flex items-center gap-2">
         <div className="relative">
           <MagnifyingGlass size={16} weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -145,7 +131,7 @@ export function CommandeTable({ data }: { data: LotWithDossier[] }) {
           />
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-white dark:bg-card">
+      <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
         <Table className={paginatedData.length === 0 ? "h-full" : ""}>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow className="bg-transparent hover:bg-transparent">
@@ -181,7 +167,7 @@ export function CommandeTable({ data }: { data: LotWithDossier[] }) {
                   <TableRow
                     key={item.id}
                     className="cursor-pointer bg-white dark:bg-card"
-                    onClick={() => router.push(`/commandes/${item.id}`)}
+                    onClick={() => router.push(`/ventes/${item.id}`)}
                   >
                     <TableCell className="pl-4">
                       <div className="flex items-center gap-3">
@@ -207,6 +193,7 @@ export function CommandeTable({ data }: { data: LotWithDossier[] }) {
                               variant="ghost"
                               size="icon-xs"
                               onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                              aria-label="Actions"
                             />
                           }
                         >
@@ -216,11 +203,11 @@ export function CommandeTable({ data }: { data: LotWithDossier[] }) {
                           <DropdownMenuItem
                             onClick={(e: React.MouseEvent) => {
                               e.stopPropagation();
-                              router.push(`/commandes/${item.id}`);
+                              router.push(`/ventes/${item.id}`);
                             }}
                           >
                             <Eye size={16} weight="duotone" />
-                            Gérer la commande
+                            Voir détail
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
