@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
 import Link from "next/link";
+import { PreviewLink } from "@/components/preview/preview-link";
+import { usePreviewDrawer } from "@/hooks/use-preview-drawer";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -17,6 +19,7 @@ import {
   FloppyDisk,
   Eye,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +107,9 @@ export function ClientDetailPage({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
+  const { openPreview } = usePreviewDrawer();
   const [saving, setSaving] = useState(false);
+  const [creatingDossier, setCreatingDossier] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [civility, setCivility] = useState(client.civility);
@@ -119,6 +124,21 @@ export function ClientDetailPage({
   const [country, setCountry] = useState(client.country ?? "France");
   const [leadSource, setLeadSource] = useState(client.lead_source ?? "");
   const [notes, setNotes] = useState(client.notes ?? "");
+
+  async function handleCreateDossier() {
+    setCreatingDossier(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("dossiers")
+      .insert({ numero: "", client_id: client.id, created_by: user?.id ?? "" })
+      .select()
+      .single();
+    setCreatingDossier(false);
+    if (error) { toast.error("Erreur lors de la création du dossier"); return; }
+    toast.success("Dossier créé");
+    router.push(`/dossiers/${data.id}`);
+  }
 
   async function handleSave() {
     const formData = {
@@ -170,6 +190,7 @@ export function ClientDetailPage({
       .eq("id", client.id);
     setSaving(false);
     setEditing(false);
+    toast.success("Client mis à jour");
     router.refresh();
   }
 
@@ -182,6 +203,7 @@ export function ClientDetailPage({
       .eq("id", client.id);
     setSaving(false);
     setEditingNotes(false);
+    toast.success("Notes sauvegardées");
     router.refresh();
   }
 
@@ -239,9 +261,9 @@ export function ClientDetailPage({
                 }
               />
               <DetailRow label="Prénom" value={client.first_name} editing={editing} editValue={firstName} onEditChange={setFirstName} />
-              {errors.first_name && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1">{errors.first_name}</p>}
+              {errors.first_name && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1 animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.first_name}</p>}
               <DetailRow label="Nom" value={client.last_name} editing={editing} editValue={lastName} onEditChange={setLastName} />
-              {errors.last_name && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1">{errors.last_name}</p>}
+              {errors.last_name && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1 animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.last_name}</p>}
               <DetailRow label="Nom de jeune fille" value={client.maiden_name ?? "—"} editing={editing} editValue={maidenName} onEditChange={setMaidenName} />
               <DetailRow
                 label="Email"
@@ -251,7 +273,7 @@ export function ClientDetailPage({
                   <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 }
               />
-              {errors.email && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1">{errors.email}</p>}
+              {errors.email && editing && <p className="text-sm text-destructive text-right -mt-1 mb-1 animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.email}</p>}
               <DetailRow
                 label="Téléphone"
                 value={client.phone ? <CopyableText value={client.phone} /> : "—"}
@@ -303,12 +325,10 @@ export function ClientDetailPage({
                 Dossiers
               </h3>
               {identityDocuments.length > 0 ? (
-                <Link href={`/dossiers/new?client_id=${client.id}`}>
-                  <Button variant="secondary" size="sm">
-                    <Plus size={14} weight="bold" />
-                    Créer un dossier
-                  </Button>
-                </Link>
+                <Button variant="secondary" size="sm" disabled={creatingDossier} onClick={handleCreateDossier}>
+                  <Plus size={14} weight="bold" />
+                  {creatingDossier ? "Création..." : "Créer un dossier"}
+                </Button>
               ) : (
                 <Tooltip>
                   <TooltipTrigger
@@ -345,7 +365,7 @@ export function ClientDetailPage({
                       <TableRow
                         key={dossier.id}
                         className="cursor-pointer"
-                        onClick={() => window.open(`/dossiers/${dossier.id}`, "_blank")}
+                        onClick={() => openPreview("dossier", dossier.id)}
                       >
                         <TableCell className="pl-4 font-medium">{dossier.numero}</TableCell>
                         <TableCell>
@@ -369,7 +389,7 @@ export function ClientDetailPage({
                             size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(`/dossiers/${dossier.id}`, "_blank");
+                              openPreview("dossier", dossier.id);
                             }}
                           >
                             <Eye size={16} weight="duotone" />

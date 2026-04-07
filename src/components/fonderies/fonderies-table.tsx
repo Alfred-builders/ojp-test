@@ -108,7 +108,8 @@ export function FonderiesTable({ fonderies, totalItems, page, pageSize }: Fonder
     const supabase = createClient();
     const { error } = await mutate(
       supabase.from("fonderies").delete().eq("id", id),
-      "Erreur lors de la suppression de la fonderie"
+      "Erreur lors de la suppression de la fonderie",
+      "Fonderie mise à jour"
     );
     if (error) return;
     router.refresh();

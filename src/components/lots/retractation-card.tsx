@@ -111,7 +111,8 @@ export function RetractationCard({ lot }: RetractationCardProps) {
             .insert(stockPayload)
             .select("id")
             .single(),
-          "Erreur lors de l'ajout au stock bijoux"
+          "Erreur lors de l'ajout au stock bijoux",
+          "Rétractation enregistrée"
         );
         if (stockError) { setLoading(false); return; }
 
@@ -124,7 +125,8 @@ export function RetractationCard({ lot }: RetractationCardProps) {
                 destination_stock_id: stockEntry.id,
               })
               .eq("id", ref.id),
-            "Erreur lors de la mise à jour de la référence"
+            "Erreur lors de la mise à jour de la référence",
+            "Rétractation enregistrée"
           );
           if (refError) { setLoading(false); return; }
         }
@@ -136,7 +138,8 @@ export function RetractationCard({ lot }: RetractationCardProps) {
             p_id: ref.or_investissement_id,
             p_qty: ref.quantite,
           }),
-          "Erreur lors de la mise à jour du stock or investissement"
+          "Erreur lors de la mise à jour du stock or investissement",
+          "Rétractation enregistrée"
         );
         if (rpcError) { setLoading(false); return; }
 
@@ -145,7 +148,8 @@ export function RetractationCard({ lot }: RetractationCardProps) {
             .from("lot_references")
             .update({ status: "route_stock" })
             .eq("id", ref.id),
-          "Erreur lors de la mise à jour du statut de la référence"
+          "Erreur lors de la mise à jour du statut de la référence",
+          "Rétractation enregistrée"
         );
         if (refOrError) { setLoading(false); return; }
       }
@@ -156,7 +160,8 @@ export function RetractationCard({ lot }: RetractationCardProps) {
         status: "finalise",
         date_finalisation: new Date().toISOString(),
       }).eq("id", lot.id),
-      "Erreur lors de la finalisation du lot"
+      "Erreur lors de la finalisation du lot",
+      "Rétractation enregistrée"
     );
     if (lotError) { setLoading(false); return; }
 
@@ -224,13 +229,15 @@ export function RetractationCard({ lot }: RetractationCardProps) {
         .from("lot_references")
         .update({ status: "retracte" })
         .eq("lot_id", lot.id),
-      "Erreur lors de la rétractation des références"
+      "Erreur lors de la rétractation des références",
+      "Rétractation enregistrée"
     );
     if (retRefError) { setLoading(false); return; }
 
     const { error: retLotError } = await mutate(
       supabase.from("lots").update({ status: "retracte" }).eq("id", lot.id),
-      "Erreur lors de la rétractation du lot"
+      "Erreur lors de la rétractation du lot",
+      "Rétractation enregistrée"
     );
     if (retLotError) { setLoading(false); return; }
 

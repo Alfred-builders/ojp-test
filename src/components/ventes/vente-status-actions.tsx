@@ -94,7 +94,8 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
             .from("bijoux_stock")
             .update({ statut: "vendu" })
             .eq("id", ligne.bijoux_stock_id),
-          "Erreur lors du passage en vendu du bijou"
+          "Erreur lors du passage en vendu du bijou",
+          "Statut mis à jour"
         );
         if (errStock) return;
 
@@ -104,7 +105,8 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
               .from("lot_references")
               .update({ status: "vendu" })
               .eq("destination_stock_id", ligne.bijoux_stock_id),
-            "Erreur lors de la mise à jour de la référence dépôt-vente"
+            "Erreur lors de la mise à jour de la référence dépôt-vente",
+            "Statut mis à jour"
           );
           if (errRef) return;
 
@@ -218,7 +220,8 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
         solde_paye: true,
         date_solde: new Date().toISOString(),
       }).eq("id", lot.id),
-      "Erreur lors de la finalisation du lot de vente"
+      "Erreur lors de la finalisation du lot de vente",
+      "Vente finalisée"
     );
     if (errLot) return;
 
@@ -251,7 +254,8 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
             .from("bijoux_stock")
             .update({ statut: revertStatus })
             .eq("id", ligne.bijoux_stock_id),
-          "Erreur lors de la remise en stock du bijou"
+          "Erreur lors de la remise en stock du bijou",
+          "Statut mis à jour"
         );
         if (errRevert) break;
       }
@@ -259,7 +263,8 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
 
     const { error: errAnnule } = await mutate(
       supabase.from("lots").update({ status: "annule" }).eq("id", lot.id),
-      "Erreur lors de l'annulation du lot de vente"
+      "Erreur lors de l'annulation du lot de vente",
+      "Vente annulée"
     );
     if (errAnnule) return;
 

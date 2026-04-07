@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
 import Link from "next/link";
+import { PreviewLink } from "@/components/preview/preview-link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -132,6 +133,7 @@ export function DossierDetailPage({
       .eq("id", dossier.id);
     setSaving(false);
     if (error) { toast.error("Erreur lors de l'enregistrement du dossier"); return; }
+    toast.success("Dossier mis à jour");
     setEditing(false);
     setEditingNotes(false);
     router.refresh();
@@ -149,6 +151,7 @@ export function DossierDetailPage({
       .eq("id", dossier.id);
     setSaving(false);
     if (error) { toast.error("Erreur lors de l'enregistrement des notes"); return; }
+    toast.success("Notes sauvegardées");
     setEditingNotes(false);
     router.refresh();
   }
@@ -175,7 +178,8 @@ export function DossierDetailPage({
       .single();
 
     setCreatingLot(false);
-    if (error) { toast.error("Erreur lors de la création du lot"); return; }
+    if (error) { console.error("Lot creation error:", error); toast.error(`Erreur lors de la création du lot : ${error.message}`); return; }
+    toast.success("Lot ajouté");
     if (lot) {
       router.push(
         type === "vente" ? `/ventes/${lot.id}`
@@ -189,6 +193,7 @@ export function DossierDetailPage({
     const supabase = createClient();
     const { error } = await supabase.from("lots").delete().eq("id", lotId);
     if (error) { toast.error("Erreur lors de la suppression du lot"); return; }
+    toast.success("Lot supprimé");
     router.refresh();
   }
 
@@ -299,12 +304,12 @@ export function DossierDetailPage({
                 <PhUser size={20} weight="duotone" />
                 Client
               </CardTitle>
-              <Link href={`/clients/${dossier.client.id}`} target="_blank">
+              <PreviewLink entityType="client" entityId={dossier.client.id} href={`/clients/${dossier.client.id}`}>
                 <Button variant="secondary" size="sm">
                   <ArrowSquareOut size={14} weight="duotone" />
                   Voir le client
                 </Button>
-              </Link>
+              </PreviewLink>
             </CardHeader>
             <CardContent>
               <DetailRow label="Nom" value={

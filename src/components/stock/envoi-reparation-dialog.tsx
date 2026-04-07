@@ -44,7 +44,8 @@ export function EnvoiReparationDialog({
         description: description || null,
         cout_estime: coutEstime ? parseFloat(coutEstime) : null,
       }),
-      "Erreur lors de la création de la réparation"
+      "Erreur lors de la création de la réparation",
+      "Envoyé en réparation"
     );
     if (insertError) { setSaving(false); return; }
 
@@ -53,7 +54,8 @@ export function EnvoiReparationDialog({
         .from("bijoux_stock")
         .update({ statut: "en_reparation", updated_at: new Date().toISOString() })
         .eq("id", bijouId),
-      "Erreur lors de la mise à jour du statut du bijou"
+      "Erreur lors de la mise à jour du statut du bijou",
+      "Envoyé en réparation"
     );
     if (updateError) { setSaving(false); return; }
 

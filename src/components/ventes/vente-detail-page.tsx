@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
 import Link from "next/link";
+import { PreviewLink } from "@/components/preview/preview-link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -260,9 +261,9 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
                 value={
                   <span className="inline-flex items-center gap-1.5">
                     {lot.dossier.numero}
-                    <Link href={`/dossiers/${lot.dossier.id}`} target="_blank">
+                    <PreviewLink entityType="dossier" entityId={lot.dossier.id} href={`/dossiers/${lot.dossier.id}`}>
                       <ArrowSquareOut size={14} weight="duotone" className="text-muted-foreground hover:text-foreground transition-colors" />
-                    </Link>
+                    </PreviewLink>
                   </span>
                 }
               />
@@ -286,12 +287,12 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
                 <PhUser size={20} weight="duotone" />
                 Client
               </CardTitle>
-              <Link href={`/clients/${lot.dossier.client.id}`} target="_blank">
+              <PreviewLink entityType="client" entityId={lot.dossier.client.id} href={`/clients/${lot.dossier.client.id}`}>
                 <Button variant="secondary" size="sm">
                   <ArrowSquareOut size={14} weight="duotone" />
                   Voir le client
                 </Button>
-              </Link>
+              </PreviewLink>
             </CardHeader>
             <CardContent>
               <DetailRow label="Nom" value={
@@ -479,12 +480,6 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
           </CardContent>
         </Card>
 
-        {/* Annuler la vente — discret en bas de page */}
-        {status === "en_cours" && (
-          <div className="flex justify-end pt-2">
-            <VenteStatusActions lot={lot} reglements={reglements} mode="annuler" />
-          </div>
-        )}
       </div>
     </>
   );

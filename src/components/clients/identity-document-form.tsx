@@ -179,6 +179,7 @@ export function IdentityDocumentSection({
 
     setSaving(false);
     if (error) { toast.error("Erreur lors de l'ajout du document"); return; }
+    toast.success("Document ajouté");
     resetForm();
     router.refresh();
   }
@@ -235,6 +236,7 @@ export function IdentityDocumentSection({
 
     setSaving(false);
     if (error) { toast.error("Erreur lors de la mise à jour du document"); return; }
+    toast.success("Document mis à jour");
     resetForm();
     router.refresh();
   }
@@ -249,6 +251,7 @@ export function IdentityDocumentSection({
       .delete()
       .eq("id", docId);
     if (error) { toast.error("Erreur lors de la suppression du document"); return; }
+    toast.success("Document supprimé");
     setConfirmDeleteId(null);
     router.refresh();
   }
@@ -267,6 +270,7 @@ export function IdentityDocumentSection({
       .update({ is_primary: true })
       .eq("id", docId);
     if (error) { toast.error("Erreur lors de la mise à jour du document principal"); return; }
+    toast.success("Document principal défini");
     router.refresh();
   }
 
@@ -305,13 +309,13 @@ export function IdentityDocumentSection({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.document_type && <p className="text-sm text-destructive">{errors.document_type}</p>}
+                {errors.document_type && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.document_type}</p>}
               </div>
 
               <div className="space-y-1.5">
                 <Label>Numéro *</Label>
                 <Input value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} placeholder="123456789" />
-                {errors.document_number && <p className="text-sm text-destructive">{errors.document_number}</p>}
+                {errors.document_number && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.document_number}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -473,13 +477,13 @@ export function IdentityDocumentSection({
                 ))}
               </SelectContent>
             </Select>
-            {errors.document_type && <p className="text-sm text-destructive">{errors.document_type}</p>}
+            {errors.document_type && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.document_type}</p>}
           </div>
 
           <div className="space-y-1.5">
             <Label>Numéro *</Label>
             <Input value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} placeholder="123456789" />
-            {errors.document_number && <p className="text-sm text-destructive">{errors.document_number}</p>}
+            {errors.document_number && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.document_number}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -64,6 +64,7 @@ export function BonCommandeCard({ bdc, reglements, lotId }: BonCommandeCardProps
     }).eq("id", bdc.id);
     setLoading(false);
     if (error) { toast.error("Erreur lors de la mise à jour du bon de commande"); return; }
+    toast.success("Statut mis à jour");
     router.refresh();
   }
 
@@ -85,6 +86,7 @@ export function BonCommandeCard({ bdc, reglements, lotId }: BonCommandeCardProps
     }
 
     setLoading(false);
+    toast.success("Statut mis à jour");
     router.refresh();
   }
 
@@ -96,6 +98,7 @@ export function BonCommandeCard({ bdc, reglements, lotId }: BonCommandeCardProps
     }).eq("id", bdc.id);
     setLoading(false);
     if (error) { toast.error("Erreur lors de l'annulation du bon de commande"); return; }
+    toast.success("Statut mis à jour");
     router.refresh();
   }
 

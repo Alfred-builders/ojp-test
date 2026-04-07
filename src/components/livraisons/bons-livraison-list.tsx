@@ -145,7 +145,8 @@ export function BonsLivraisonList({ bonsLivraison, fonderies }: BonsLivraisonLis
           .insert({ fonderie_id: fonderieId, numero: "" })
           .select()
           .single(),
-        "Erreur lors de la création du bon de livraison"
+        "Erreur lors de la création du bon de livraison",
+        "Bon de livraison généré"
       );
 
       if (bdlError || !bdl) break;
@@ -170,7 +171,8 @@ export function BonsLivraisonList({ bonsLivraison, fonderies }: BonsLivraisonLis
 
       const { error: lignesError } = await mutate(
         supabase.from("bon_livraison_lignes").insert(lignesPayload),
-        "Erreur lors de la création des lignes du bon de livraison"
+        "Erreur lors de la création des lignes du bon de livraison",
+        "Lignes créées"
       );
       if (lignesError) break;
 
@@ -180,7 +182,8 @@ export function BonsLivraisonList({ bonsLivraison, fonderies }: BonsLivraisonLis
           .from("bijoux_stock")
           .update({ statut: "fondu" })
           .in("id", items.map((i) => i.id)),
-        "Erreur lors de la mise à jour du statut des articles"
+        "Erreur lors de la mise à jour du statut des articles",
+        "Statut des articles mis à jour"
       );
       if (stockError) break;
 

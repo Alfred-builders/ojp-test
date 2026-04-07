@@ -104,7 +104,8 @@ export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
         statut: "envoye",
         date_envoi: new Date().toISOString(),
       }).eq("id", bdl.id),
-      "Erreur lors du marquage comme envoyé"
+      "Erreur lors du marquage comme envoyé",
+      "Bon de livraison envoyé"
     );
     setLoading(false);
     if (error) return;
@@ -118,7 +119,8 @@ export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
         statut: "recu",
         date_reception: new Date().toISOString(),
       }).eq("id", bdl.id),
-      "Erreur lors du marquage comme reçu"
+      "Erreur lors du marquage comme reçu",
+      "Bon de livraison reçu"
     );
     setLoading(false);
     if (error) return;
@@ -131,13 +133,15 @@ export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
     if (stockIds.length > 0) {
       const { error: stockError } = await mutate(
         supabase.from("bijoux_stock").update({ statut: "en_stock" }).in("id", stockIds),
-        "Erreur lors de la remise en stock des articles"
+        "Erreur lors de la remise en stock des articles",
+        "Articles remis en stock"
       );
       if (stockError) { setLoading(false); return; }
     }
     const { error } = await mutate(
       supabase.from("bons_livraison").update({ statut: "annule" }).eq("id", bdl.id),
-      "Erreur lors de l'annulation du bon de livraison"
+      "Erreur lors de l'annulation du bon de livraison",
+      "Bon de livraison annulé"
     );
     setLoading(false);
     if (error) return;
@@ -170,7 +174,8 @@ export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
             date_test: new Date().toISOString(),
           })
           .eq("id", ligne.id),
-        "Erreur lors de la mise à jour des résultats fonderie"
+        "Erreur lors de la mise à jour des résultats fonderie",
+        "Résultats fonderie enregistrés"
       );
       if (error) { hasError = true; break; }
     }
@@ -182,7 +187,8 @@ export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
         statut: "traite",
         date_traitement: new Date().toISOString(),
       }).eq("id", bdl.id),
-      "Erreur lors de la validation du bon de livraison"
+      "Erreur lors de la validation du bon de livraison",
+      "Bon de livraison traité"
     );
     setSavingEcarts(false);
     if (error) return;

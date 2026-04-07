@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { FileText, DownloadSimple, X, Eye, DotsThree } from "@phosphor-icons/react";
+import React, { useState, useEffect, useCallback } from "react";
+import { FileText, DownloadSimple, X, Eye, DotsThree, SpinnerGap } from "@phosphor-icons/react";
+import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -166,57 +167,125 @@ export function DocumentsTable({ documents, title = "Documents", rowActions }: D
 
       {/* PDF Viewer Modal */}
       {viewingDoc && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
-          onClick={() => setViewingDoc(null)}
-        >
-          <div
-            className="relative flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-background shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="font-medium">{viewingDoc.numero}</span>
-                <Badge
-                  variant="secondary"
-                  className={TYPE_CONFIG[viewingDoc.type].className}
-                >
-                  {TYPE_CONFIG[viewingDoc.type].label}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    window.open(getStorageUrl(viewingDoc.storage_path), "_blank")
-                  }
-                >
-                  <DownloadSimple size={14} weight="regular" />
-                  Télécharger
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => setViewingDoc(null)}
-                  aria-label="Fermer"
-                >
-                  <X size={16} weight="regular" />
-                </Button>
-              </div>
-            </div>
-            {/* PDF iframe */}
-            <div className="flex-1">
-              <iframe
-                src={getStorageUrl(viewingDoc.storage_path)}
-                className="h-full w-full"
-                title={viewingDoc.numero}
-              />
-            </div>
+        <PdfViewerModal
+          doc={viewingDoc}
+          onClose={() => setViewingDoc(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PdfViewerModal({ doc, onClose }: { doc: DocumentRecord; onClose: () => void }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let revoke: string | null = null;
+    let cancelled = false;
+    const supabase = createClient();
+
+    supabase.storage
+      .from("documents")
+      .download(doc.storage_path)
+      .then(({ data, error: err }) => {
+        if (cancelled) return;
+        if (err || !data) {
+          console.error("PDF download error:", err, "path:", doc.storage_path);
+          setError(true);
+          setLoading(false);
+          return;
+        }
+        // Force correct MIME type
+        const pdfBlob = new Blob([data], { type: "application/pdf" });
+        const url = URL.createObjectURL(pdfBlob);
+        revoke = url;
+        setBlobUrl(url);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [doc.storage_path]);
+
+  const handleDownload = useCallback(() => {
+    if (blobUrl) {
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${doc.numero}.pdf`;
+      a.click();
+    } else {
+      window.open(getStorageUrl(doc.storage_path), "_blank");
+    }
+  }, [blobUrl, doc.numero, doc.storage_path]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-background shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="font-medium">{doc.numero}</span>
+            <Badge
+              variant="secondary"
+              className={TYPE_CONFIG[doc.type].className}
+            >
+              {TYPE_CONFIG[doc.type].label}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+            >
+              <DownloadSimple size={14} weight="regular" />
+              Télécharger
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onClose}
+              aria-label="Fermer"
+            >
+              <X size={16} weight="regular" />
+            </Button>
           </div>
         </div>
-      )}
+        {/* PDF content */}
+        <div className="flex-1">
+          {loading && (
+            <div className="flex h-full items-center justify-center">
+              <SpinnerGap size={32} weight="regular" className="animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {error && (
+            <div className="flex h-full flex-col items-center justify-center gap-2">
+              <p className="text-sm text-muted-foreground">Impossible de charger le document.</p>
+              <Button variant="outline" size="sm" onClick={handleDownload}>
+                <DownloadSimple size={14} weight="regular" />
+                Télécharger directement
+              </Button>
+            </div>
+          )}
+          {blobUrl && (
+            <iframe
+              src={blobUrl}
+              className="h-full w-full"
+              title={doc.numero}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

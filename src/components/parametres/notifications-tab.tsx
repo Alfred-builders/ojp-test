@@ -145,7 +145,9 @@ export function NotificationsTab({ settings, onRegisterSave }: NotificationsTabP
   }
 
   const doSave = useCallback(async () => {
-    return await save(form);
+    const success = await save(form);
+    if (success) toast.success("Paramètres sauvegardés");
+    return success;
   }, [form, save]);
 
   useEffect(() => {

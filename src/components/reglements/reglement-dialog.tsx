@@ -92,6 +92,8 @@ export function ReglementDialog({ open, onOpenChange, paymentDue, lotId }: Regle
       return;
     }
 
+    toast.success("Règlement enregistré");
+
     // If fonderie payment covers the full amount, update bon_commande statut
     if (paymentDue.type === "fonderie" && paymentDue.pre_fill.bon_commande_id) {
       const newTotal = paymentDue.montant_deja_paye + montantNum;
@@ -137,7 +139,7 @@ export function ReglementDialog({ open, onOpenChange, paymentDue, lotId }: Regle
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>}
 
           {/* Info box */}
           <div className="rounded-lg bg-muted px-3 py-2 text-sm">

@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, User } from "@phosphor-icons/react";
+import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, User, Trash, EnvelopeSimple, WarningCircle } from "@phosphor-icons/react";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 import {
   Table,
@@ -19,7 +21,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { ClientToolbar } from "@/components/clients/client-toolbar";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatDate } from "@/lib/format";
@@ -78,6 +89,32 @@ export function ClientTable({ data, totalItems, page, pageSize }: ClientTablePro
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+
+  async function handleDeleteClient() {
+    if (!deletingClientId) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("clients").delete().eq("id", deletingClientId);
+    setDeletingClientId(null);
+    if (error) {
+      if (error.message.includes("violates foreign key")) {
+        toast.error("Impossible de supprimer ce client : il a des dossiers associés");
+      } else {
+        toast.error("Erreur lors de la suppression du client");
+      }
+      return;
+    }
+    toast.success("Client supprimé");
+    router.refresh();
+  }
+
+  function handleSendEmail(client: Client) {
+    if (!client.email) {
+      toast.error("Ce client n'a pas d'adresse email");
+      return;
+    }
+    window.open(`mailto:${client.email}`, "_blank");
+  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -218,6 +255,27 @@ export function ClientTable({ data, totalItems, page, pageSize }: ClientTablePro
                               <Eye size={16} weight="duotone" />
                               Voir détail
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                handleSendEmail(item);
+                              }}
+                              disabled={!item.email}
+                            >
+                              <EnvelopeSimple size={16} weight="duotone" />
+                              Envoyer un email
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                setDeletingClientId(item.id);
+                              }}
+                            >
+                              <Trash size={16} weight="duotone" />
+                              Supprimer
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -234,6 +292,29 @@ export function ClientTable({ data, totalItems, page, pageSize }: ClientTablePro
         onPageChange={navigatePage}
         onPageSizeChange={navigatePageSize}
       />
+
+      <Dialog open={!!deletingClientId} onOpenChange={(open) => { if (!open) setDeletingClientId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <WarningCircle size={20} weight="duotone" className="text-destructive" />
+              Supprimer le client
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible. Les clients avec des dossiers associés ne peuvent pas être supprimés.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeletingClientId(null)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteClient}>
+              <Trash size={14} weight="duotone" />
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

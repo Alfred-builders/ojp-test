@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
 import Link from "next/link";
+import { PreviewLink } from "@/components/preview/preview-link";
 import { useRouter } from "next/navigation";
 import { getSettingClient } from "@/lib/settings-client";
 import {
@@ -129,7 +130,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         .from("lot_references")
         .update({ status: "bloque" })
         .eq("lot_id", lot.id),
-      "Erreur lors du blocage des références"
+      "Erreur lors du blocage des références",
+      "Statut du lot mis à jour"
     );
     if (e1) { setDevisLoading(false); return; }
     const { error: e2 } = await mutate(
@@ -138,7 +140,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         date_acceptation: now.toISOString(),
         date_fin_retractation: retractEnd.toISOString(),
       }).eq("id", lot.id),
-      "Erreur lors de la mise à jour du lot"
+      "Erreur lors de la mise à jour du lot",
+      "Statut du lot mis à jour"
     );
     if (e2) { setDevisLoading(false); return; }
     triggerEmail({
@@ -154,7 +157,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
     setDevisLoading(true);
     const { error } = await mutate(
       supabase.from("lots").update({ status: "refuse" }).eq("id", lot.id),
-      "Erreur lors du refus du lot"
+      "Erreur lors du refus du lot",
+      "Statut du lot mis à jour"
     );
     if (error) { setDevisLoading(false); return; }
     setDevisLoading(false);
@@ -192,7 +196,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
     const supabase = createClient();
     const { error } = await mutate(
       supabase.from("lot_references").delete().eq("id", refId),
-      "Erreur lors de la suppression de la référence"
+      "Erreur lors de la suppression de la référence",
+      "Référence supprimée"
     );
     if (error) return;
     router.refresh();
@@ -209,7 +214,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         .from("lot_references")
         .update({ status: "rendu_client" })
         .eq("id", refId),
-      "Erreur lors de la restitution de la référence"
+      "Erreur lors de la restitution de la référence",
+      "Référence mise à jour"
     );
     if (e1) return;
 
@@ -220,7 +226,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
           .from("bijoux_stock")
           .update({ statut: "rendu_client" })
           .eq("id", ref.destination_stock_id),
-        "Erreur lors de la mise à jour du stock"
+        "Erreur lors de la mise à jour du stock",
+        "Référence mise à jour"
       );
       if (e2) return;
     }
@@ -236,7 +243,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         .from("lots")
         .update({ notes: notes || null })
         .eq("id", lot.id),
-      "Erreur lors de l'enregistrement des notes"
+      "Erreur lors de l'enregistrement des notes",
+      "Notes sauvegardées"
     );
     if (error) { setSavingNotes(false); return; }
     setSavingNotes(false);
@@ -262,7 +270,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
           .from("lots")
           .update({ status: "finalise", date_finalisation: new Date().toISOString() })
           .eq("id", lot.id),
-        "Erreur lors de la finalisation du lot"
+        "Erreur lors de la finalisation du lot",
+        "Référence mise à jour"
       );
       if (e1) return;
 
@@ -282,7 +291,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
             .from("dossiers")
             .update({ status: "finalise" })
             .eq("id", lot.dossier_id),
-          "Erreur lors de la finalisation du dossier"
+          "Erreur lors de la finalisation du dossier",
+          "Référence mise à jour"
         );
         if (e2) return;
       }
@@ -310,7 +320,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         })
         .select("id")
         .single(),
-      "Erreur lors de la création de l'entrée en stock"
+      "Erreur lors de la création de l'entrée en stock",
+      "Référence mise à jour"
     );
     if (e1) return;
 
@@ -322,7 +333,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
           destination_stock_id: stockEntry?.id ?? null,
         })
         .eq("id", refId),
-      "Erreur lors de la finalisation de la référence"
+      "Erreur lors de la finalisation de la référence",
+      "Référence mise à jour"
     );
     if (e2) return;
 
@@ -373,7 +385,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         .from("lot_references")
         .update({ status: "retracte" })
         .eq("id", refId),
-      "Erreur lors de la rétractation de la référence"
+      "Erreur lors de la rétractation de la référence",
+      "Référence mise à jour"
     );
     if (error) return;
 
@@ -393,7 +406,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
           p_id: ref.or_investissement_id,
           p_qty: ref.quantite,
         }),
-        "Erreur lors de l'incrémentation du stock or investissement"
+        "Erreur lors de l'incrémentation du stock or investissement",
+        "Référence mise à jour"
       );
       if (e1) return;
       const { error: e2 } = await mutate(
@@ -401,7 +415,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
           .from("lot_references")
           .update({ status: "finalise" })
           .eq("id", refId),
-        "Erreur lors de la finalisation de la référence"
+        "Erreur lors de la finalisation de la référence",
+        "Référence mise à jour"
       );
       if (e2) return;
     } else {
@@ -417,7 +432,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
             date_fin_delai: delai.toISOString(),
           })
           .eq("id", refId),
-        "Erreur lors de la mise en rétractation de la référence"
+        "Erreur lors de la mise en rétractation de la référence",
+        "Référence mise à jour"
       );
       if (e3) return;
     }
@@ -433,7 +449,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         .from("lot_references")
         .update({ status: "devis_refuse" })
         .eq("id", refId),
-      "Erreur lors du refus du devis"
+      "Erreur lors du refus du devis",
+      "Référence mise à jour"
     );
     if (error) return;
 
@@ -463,7 +480,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
                 setSaving(true);
                 const { error } = await mutate(
                   supabase.from("lots").update({ updated_at: new Date().toISOString() }).eq("id", lot.id),
-                  "Erreur lors de l'enregistrement du lot"
+                  "Erreur lors de l'enregistrement du lot",
+                  "Référence mise à jour"
                 );
                 setSaving(false);
                 if (error) return;
@@ -493,9 +511,9 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
               <DetailRow label="Dossier" value={
                 <span className="inline-flex items-center gap-1.5">
                   {lot.dossier.numero}
-                  <Link href={`/dossiers/${lot.dossier.id}`} target="_blank">
+                  <PreviewLink entityType="dossier" entityId={lot.dossier.id} href={`/dossiers/${lot.dossier.id}`}>
                     <ArrowSquareOut size={14} weight="duotone" className="text-muted-foreground hover:text-foreground transition-colors" />
-                  </Link>
+                  </PreviewLink>
                 </span>
               } />
               <DetailRow label="Date de création" value={formatDate(lot.created_at)} />
@@ -515,12 +533,12 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
                 <PhUser size={20} weight="duotone" />
                 Client
               </CardTitle>
-              <Link href={`/clients/${lot.dossier.client.id}`} target="_blank">
+              <PreviewLink entityType="client" entityId={lot.dossier.client.id} href={`/clients/${lot.dossier.client.id}`}>
                 <Button variant="secondary" size="sm">
                   <ArrowSquareOut size={14} weight="duotone" />
                   Voir le client
                 </Button>
-              </Link>
+              </PreviewLink>
             </CardHeader>
             <CardContent>
               <DetailRow label="Nom" value={

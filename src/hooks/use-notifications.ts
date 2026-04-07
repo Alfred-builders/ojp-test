@@ -67,7 +67,8 @@ export function useNotifications(userId: string) {
           .from("notifications")
           .update({ is_read: true })
           .eq("id", id),
-        "Erreur lors du marquage de la notification"
+        "Erreur lors du marquage de la notification",
+        "Notification marquée comme lue"
       );
     },
     [supabase]
@@ -82,7 +83,8 @@ export function useNotifications(userId: string) {
         .update({ is_read: true })
         .eq("user_id", userId)
         .eq("is_read", false),
-      "Erreur lors du marquage des notifications"
+      "Erreur lors du marquage des notifications",
+      "Toutes les notifications marquées comme lues"
     );
   }, [userId, supabase]);
 

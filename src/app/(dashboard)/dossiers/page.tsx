@@ -1,10 +1,9 @@
-import Link from "next/link";
-import { FolderPlus } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { PageWrapper } from "@/components/dashboard/page-wrapper";
 import { DossierTable } from "@/components/dossiers/dossier-table";
-import { Button } from "@/components/ui/button";
+import { DossierCreateButton } from "@/components/dossiers/dossier-create-button";
 import type { DossierWithClient } from "@/types/dossier";
+import type { Client } from "@/types/client";
 
 export default async function DossiersPage({
   searchParams,
@@ -19,30 +18,28 @@ export default async function DossiersPage({
 
   const supabase = await createClient();
 
-  const { count } = await supabase
-    .from("dossiers")
-    .select("*", { count: "exact", head: true });
-
-  const { data } = await supabase
-    .from("dossiers")
-    .select("*, client:clients(id, civility, first_name, last_name, is_valid)")
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  const [{ count }, { data }, { data: clientsData }] = await Promise.all([
+    supabase.from("dossiers").select("*", { count: "exact", head: true }),
+    supabase
+      .from("dossiers")
+      .select("*, client:clients(id, civility, first_name, last_name, is_valid)")
+      .order("created_at", { ascending: false })
+      .range(from, to),
+    supabase
+      .from("clients")
+      .select("*")
+      .eq("is_valid", true)
+      .order("last_name", { ascending: true }),
+  ]);
 
   const dossiers = (data ?? []) as DossierWithClient[];
+  const validClients = (clientsData ?? []) as Client[];
 
   return (
     <PageWrapper
       title="Dossiers"
       fullHeight
-      headerActions={
-        <Link href="/dossiers/new">
-          <Button size="sm">
-            <FolderPlus size={16} weight="duotone" />
-            Nouveau dossier
-          </Button>
-        </Link>
-      }
+      headerActions={<DossierCreateButton validClients={validClients} />}
     >
       <DossierTable data={dossiers} totalItems={count ?? 0} page={page} pageSize={size} />
     </PageWrapper>

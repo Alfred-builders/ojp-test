@@ -34,7 +34,8 @@ export function DestinationSelector({ lot }: DestinationSelectorProps) {
         .from("lot_references")
         .update({ destination: destination as ReferenceDestination })
         .eq("id", refId),
-      "Erreur lors de la mise à jour de la destination"
+      "Erreur lors de la mise à jour de la destination",
+      "Destination mise à jour"
     );
     if (error) return;
     router.refresh();

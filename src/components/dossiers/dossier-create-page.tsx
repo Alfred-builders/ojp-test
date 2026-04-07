@@ -10,6 +10,7 @@ import {
   User as PhUser,
   FloppyDisk,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ function FormField({
     <div className="space-y-1.5">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>}
     </div>
   );
 }
@@ -104,6 +105,7 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
       return;
     }
 
+    toast.success("Dossier créé");
     router.push(`/dossiers/${data.id}`);
   }
 
@@ -126,7 +128,7 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
       </Header>
       <div className="flex-1 p-6">
         {errors._form && (
-          <p className="text-sm text-destructive mb-4">{errors._form}</p>
+          <p className="text-sm text-destructive mb-4 animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors._form}</p>
         )}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Informations du dossier */}
@@ -186,7 +188,7 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
                     )}
                   </SelectContent>
                 </Select>
-                {errors.client_id && <p className="text-sm text-destructive">{errors.client_id}</p>}
+                {errors.client_id && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors.client_id}</p>}
               </div>
               {selectedClient && (
                 <div className="pt-2 border-t">

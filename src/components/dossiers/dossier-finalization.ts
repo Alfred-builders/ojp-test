@@ -83,7 +83,8 @@ export async function finaliserDossier({
       .from("dossiers")
       .update({ status: allDone ? "finalise" : "en_cours" })
       .eq("id", dossier.id),
-    "Erreur lors de la mise à jour du statut du dossier"
+    "Erreur lors de la mise à jour du statut du dossier",
+    "Dossier finalisé"
   );
   if (dossierError) return { success: false };
 

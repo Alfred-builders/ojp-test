@@ -69,7 +69,8 @@ export function BonLivraisonCard({ bdl }: BonLivraisonCardProps) {
         statut: "envoye",
         date_envoi: new Date().toISOString(),
       }).eq("id", bdl.id),
-      "Erreur lors du marquage comme envoyé"
+      "Erreur lors du marquage comme envoyé",
+      "Statut mis à jour"
     );
     setLoading(false);
     if (error) return;
@@ -83,7 +84,8 @@ export function BonLivraisonCard({ bdl }: BonLivraisonCardProps) {
         statut: "recu",
         date_reception: new Date().toISOString(),
       }).eq("id", bdl.id),
-      "Erreur lors du marquage comme reçu"
+      "Erreur lors du marquage comme reçu",
+      "Statut mis à jour"
     );
     setLoading(false);
     if (error) return;
@@ -101,7 +103,8 @@ export function BonLivraisonCard({ bdl }: BonLivraisonCardProps) {
           .from("bijoux_stock")
           .update({ statut: "en_stock" })
           .in("id", stockIds),
-        "Erreur lors de la remise en stock des articles"
+        "Erreur lors de la remise en stock des articles",
+        "Statut mis à jour"
       );
       if (stockError) { setLoading(false); return; }
     }
@@ -110,7 +113,8 @@ export function BonLivraisonCard({ bdl }: BonLivraisonCardProps) {
       supabase.from("bons_livraison").update({
         statut: "annule",
       }).eq("id", bdl.id),
-      "Erreur lors de l'annulation du bon de livraison"
+      "Erreur lors de l'annulation du bon de livraison",
+      "Statut mis à jour"
     );
     setLoading(false);
     if (error) return;

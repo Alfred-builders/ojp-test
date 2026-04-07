@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { PreviewLink } from "@/components/preview/preview-link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -191,7 +192,8 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
         .from("vente_lignes")
         .update({ fulfillment: status })
         .eq("id", ligneId),
-      "Erreur lors de la mise à jour du fulfillment"
+      "Erreur lors de la mise à jour du fulfillment",
+      "Commande mise à jour"
     );
     if (error) { setLoading(false); return; }
 
@@ -202,7 +204,8 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
           p_id: ligne.or_investissement_id,
           p_qty: -ligne.quantite,
         }),
-        "Erreur lors de la mise à jour du stock"
+        "Erreur lors de la mise à jour du stock",
+        "Commande mise à jour"
       );
       if (rpcErr) { setLoading(false); return; }
     }
@@ -214,7 +217,8 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
           p_id: ligne.or_investissement_id,
           p_qty: ligne.quantite,
         }),
-        "Erreur lors du rétablissement du stock"
+        "Erreur lors du rétablissement du stock",
+        "Commande mise à jour"
       );
       if (revertErr) { setLoading(false); return; }
     }
@@ -231,7 +235,8 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
             .from("lots")
             .update({ status: "finalise", date_finalisation: new Date().toISOString() })
             .eq("id", lot.id),
-          "Erreur lors de la finalisation du lot"
+          "Erreur lors de la finalisation du lot",
+          "Commande mise à jour"
         );
         if (finalErr) { setLoading(false); return; }
       }
@@ -280,9 +285,9 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
                 <span className="text-muted-foreground">Dossier</span>
                 <span className="inline-flex items-center gap-1.5 font-medium">
                   {lot.dossier.numero}
-                  <Link href={`/dossiers/${lot.dossier.id}`} target="_blank">
+                  <PreviewLink entityType="dossier" entityId={lot.dossier.id} href={`/dossiers/${lot.dossier.id}`}>
                     <ArrowSquareOut size={14} weight="duotone" className="text-muted-foreground hover:text-foreground transition-colors" />
-                  </Link>
+                  </PreviewLink>
                 </span>
               </div>
               <div className="flex items-center justify-between py-2">

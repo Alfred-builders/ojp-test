@@ -87,7 +87,7 @@ export default function NewFonderiePage() {
 
       <div className="flex-1 p-6 space-y-6">
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>
         )}
 
         <div className="grid gap-6 md:grid-cols-2">

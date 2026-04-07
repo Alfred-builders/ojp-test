@@ -282,7 +282,8 @@ export function StockTable({ data, canEdit = true, totalItems, page, pageSize }:
                                     const supabase = createClient();
                                     const { error } = await mutate(
                                       supabase.from("bijoux_stock").update({ statut: "a_fondre" }).eq("id", item.id),
-                                      "Erreur lors de l'envoi en fonderie"
+                                      "Erreur lors de l'envoi en fonderie",
+                                      "Stock mis à jour"
                                     );
                                     if (error) return;
                                     router.refresh();

@@ -96,7 +96,8 @@ export function FonderieDetailPage({ fonderie, bonsCommande = [] }: { fonderie: 
           email: email || null,
         })
         .eq("id", fonderie.id),
-      "Erreur lors de la mise à jour de la fonderie"
+      "Erreur lors de la mise à jour de la fonderie",
+      "Fonderie mise à jour"
     );
     setSaving(false);
     if (error) return;
@@ -112,7 +113,8 @@ export function FonderieDetailPage({ fonderie, bonsCommande = [] }: { fonderie: 
         .from("fonderies")
         .update({ notes: notes || null })
         .eq("id", fonderie.id),
-      "Erreur lors de la mise à jour des notes"
+      "Erreur lors de la mise à jour des notes",
+      "Notes sauvegardées"
     );
     setSavingNotes(false);
     if (error) return;

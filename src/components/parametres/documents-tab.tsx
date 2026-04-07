@@ -112,7 +112,9 @@ export function DocumentsTab({ prefixes: initialPrefixes, legalTexts: initialTex
       saveTexts(legalTexts),
       saveStyle(pdfStyle),
     ]);
-    return r1 && r2 && r3;
+    const success = r1 && r2 && r3;
+    if (success) toast.success("Paramètres sauvegardés");
+    return success;
   }, [prefixes, legalTexts, pdfStyle, savePrefixes, saveTexts, saveStyle]);
 
   useEffect(() => {

@@ -6,7 +6,8 @@ import { toast } from "sonner";
  */
 export async function mutate<T>(
   query: PromiseLike<{ data: T; error: { message: string } | null }>,
-  errorMessage = "Une erreur est survenue"
+  errorMessage = "Une erreur est survenue",
+  successMessage?: string
 ): Promise<{ data: T; error: null } | { data: null; error: string }> {
   const { data, error } = await query;
   if (error) {
@@ -14,5 +15,6 @@ export async function mutate<T>(
     console.error(errorMessage, error.message);
     return { data: null, error: error.message };
   }
+  if (successMessage) toast.success(successMessage);
   return { data, error: null };
 }

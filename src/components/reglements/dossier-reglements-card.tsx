@@ -16,6 +16,7 @@ import {
   Plus,
   Package,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -89,7 +90,12 @@ export function DossierReglementsCard({ lotsPayments }: DossierReglementsCardPro
     if (!deleteId) return;
     setDeleting(true);
     const supabase = createClient();
-    await supabase.from("reglements").delete().eq("id", deleteId);
+    const { error } = await supabase.from("reglements").delete().eq("id", deleteId);
+    if (error) {
+      toast.error("Erreur lors de la suppression du règlement");
+    } else {
+      toast.success("Règlement supprimé");
+    }
     setDeleting(false);
     setDeleteId(null);
     router.refresh();

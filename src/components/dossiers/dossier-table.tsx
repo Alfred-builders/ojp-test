@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, FolderOpen } from "@phosphor-icons/react";
+import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, FolderOpen, WarningCircle } from "@phosphor-icons/react";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import type { DossierWithClient, DossierStatus } from "@/types/dossier";
 import {
   Table,
@@ -21,6 +23,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { DossierToolbar } from "@/components/dossiers/dossier-toolbar";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { formatDate } from "@/lib/format";
@@ -84,6 +94,24 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
   const [statusFilter, setStatusFilter] = useState<DossierStatus | null>(null);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [deletingDossierId, setDeletingDossierId] = useState<string | null>(null);
+
+  async function handleDeleteDossier() {
+    if (!deletingDossierId) return;
+    const supabase = createClient();
+    // Clean up email_logs (no CASCADE)
+    await supabase.from("email_logs").delete().eq("dossier_id", deletingDossierId);
+    // Delete lots first (lots has ON DELETE RESTRICT, lot_references/reglements/vente_lignes CASCADE from lots)
+    const { error: lotsError } = await supabase.from("lots").delete().eq("dossier_id", deletingDossierId);
+    if (lotsError) { toast.error("Erreur lors de la suppression des lots du dossier"); setDeletingDossierId(null); return; }
+    // Documents CASCADE from dossier, but delete explicitly to be safe
+    await supabase.from("documents").delete().eq("dossier_id", deletingDossierId);
+    const { error } = await supabase.from("dossiers").delete().eq("id", deletingDossierId);
+    setDeletingDossierId(null);
+    if (error) { toast.error("Erreur lors de la suppression du dossier"); return; }
+    toast.success("Dossier supprimé");
+    router.refresh();
+  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -238,6 +266,7 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
                           variant="destructive"
                           onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
+                            setDeletingDossierId(item.id);
                           }}
                         >
                           <Trash size={16} weight="duotone" />
@@ -259,6 +288,29 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
         onPageChange={navigatePage}
         onPageSizeChange={navigatePageSize}
       />
+
+      <Dialog open={!!deletingDossierId} onOpenChange={(open) => { if (!open) setDeletingDossierId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <WarningCircle size={20} weight="duotone" className="text-destructive" />
+              Supprimer le dossier
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce dossier et tous ses lots associés ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeletingDossierId(null)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteDossier}>
+              <Trash size={14} weight="duotone" />
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

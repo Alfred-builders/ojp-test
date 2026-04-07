@@ -17,6 +17,7 @@ import {
   FileText,
 } from "@phosphor-icons/react";
 import { parse } from "date-fns";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "@/lib/supabase/mutation";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,8 @@ export function ReferenceFormOrInvest({
               coefficient_rachat_snapshot: data.coefficient_rachat,
               coefficient_vente_snapshot: data.coefficient_vente,
             }).eq("id", lotId),
-            "Erreur lors de la mise à jour des cours du lot"
+            "Erreur lors de la mise à jour des cours du lot",
+            "Référence ajoutée"
           );
         }
       }
@@ -215,11 +217,13 @@ export function ReferenceFormOrInvest({
       : await supabase.from("lot_references").insert({ ...payload, lot_id: lotId, categorie: "or_investissement", status: "en_expertise" });
 
     if (dbError) {
+      toast.error("Erreur lors de l'enregistrement de la référence");
       setError(dbError.message);
       setSaving(false);
       return;
     }
 
+    toast.success(isEdit ? "Référence modifiée" : "Référence ajoutée");
     setSaving(false);
     onClose();
     router.refresh();
@@ -238,7 +242,7 @@ export function ReferenceFormOrInvest({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>}
 
           <div className="flex gap-2">
             <button

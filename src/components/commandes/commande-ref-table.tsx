@@ -126,13 +126,15 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
       const supabase = createClient();
       const { error } = await mutate(
         supabase.from("vente_lignes").update({ fulfillment: "servi_stock" as FulfillmentStatus }).eq("id", ligne.id),
-        "Erreur lors de la mise à jour du fulfillment"
+        "Erreur lors de la mise à jour du fulfillment",
+        "Référence servie"
       );
       if (error) return;
       if (ligne.or_investissement_id) {
         const { error: rpcErr } = await mutate(
           supabase.rpc("increment_or_invest_quantite", { p_id: ligne.or_investissement_id, p_qty: -ligne.quantite }),
-          "Erreur lors de la mise à jour du stock"
+          "Erreur lors de la mise à jour du stock",
+          "Référence servie"
         );
         if (rpcErr) return;
       }
@@ -159,7 +161,8 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
           prix_total: newPrixTotal,
           fulfillment: "servi_stock" as FulfillmentStatus,
         }).eq("id", splitLigne.id),
-        "Erreur lors de la mise à jour de la ligne"
+        "Erreur lors de la mise à jour de la ligne",
+        "Référence servie"
       );
       if (updateErr) return;
 
@@ -167,7 +170,8 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
       if (splitLigne.or_investissement_id) {
         const { error: rpcErr } = await mutate(
           supabase.rpc("increment_or_invest_quantite", { p_id: splitLigne.or_investissement_id, p_qty: -splitQty }),
-          "Erreur lors de la mise à jour du stock"
+          "Erreur lors de la mise à jour du stock",
+          "Référence servie"
         );
         if (rpcErr) return;
       }
@@ -187,7 +191,8 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
           prix_total: remainingTotal,
           fulfillment: "pending",
         }),
-        "Erreur lors de la création de la ligne restante"
+        "Erreur lors de la création de la ligne restante",
+        "Référence servie"
       );
       if (insertErr) return;
 
@@ -230,7 +235,8 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
           .insert({ fonderie_id: fonderieId, numero: "" })
           .select()
           .single(),
-        "Erreur lors de la création du bon de commande"
+        "Erreur lors de la création du bon de commande",
+        "Référence servie"
       );
 
       if (bdcErr || !bdc) break;
@@ -242,7 +248,8 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
           fonderie_id: fonderieId,
           fulfillment: "commande" as FulfillmentStatus,
         }).in("id", ligneIds),
-        "Erreur lors de la mise à jour des lignes de commande"
+        "Erreur lors de la mise à jour des lignes de commande",
+        "Référence servie"
       );
       if (updateErr) break;
 

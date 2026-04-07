@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { FloppyDisk, X, Diamond, Lightning, FileText } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,11 +154,13 @@ export function ReferenceFormBijoux({
       : await supabase.from("lot_references").insert({ ...payload, lot_id: lotId, categorie: "bijoux", status: "en_expertise" });
 
     if (dbError) {
+      toast.error("Erreur lors de l'enregistrement de la référence");
       setError(dbError.message);
       setSaving(false);
       return;
     }
 
+    toast.success(isEdit ? "Référence modifiée" : "Référence ajoutée");
     setSaving(false);
     onClose();
     router.refresh();
@@ -176,7 +179,7 @@ export function ReferenceFormBijoux({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>}
 
           {!isDepotVente && (
             <div className="flex gap-2">

@@ -10,6 +10,7 @@ import {
   Info as PhInfo,
   FloppyDisk,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ function FormField({
     <div className="space-y-1.5">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>}
     </div>
   );
 }
@@ -127,6 +128,7 @@ export function ClientCreatePage() {
       return;
     }
 
+    toast.success("Client créé");
     router.push(`/clients/${data.id}`);
   }
 
@@ -149,7 +151,7 @@ export function ClientCreatePage() {
       </Header>
       <div className="flex-1 p-6">
         {errors._form && (
-          <p className="text-sm text-destructive mb-4">{errors._form}</p>
+          <p className="text-sm text-destructive mb-4 animate-in fade-in-0 slide-in-from-top-1 duration-150">{errors._form}</p>
         )}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Informations personnelles */}

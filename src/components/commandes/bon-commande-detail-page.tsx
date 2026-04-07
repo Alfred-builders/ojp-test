@@ -64,6 +64,7 @@ export function BonCommandeDetailPage({ bdc, reglements }: BonCommandeDetailPage
     }).eq("id", bdc.id);
     setLoading(false);
     if (error) { toast.error("Erreur lors de la mise à jour du bon de commande"); return; }
+    toast.success("Bon de commande envoyé");
     router.refresh();
   }
 
@@ -79,6 +80,7 @@ export function BonCommandeDetailPage({ bdc, reglements }: BonCommandeDetailPage
       if (lignesError) { setLoading(false); toast.error("Erreur lors de la mise à jour des lignes"); return; }
     }
     setLoading(false);
+    toast.success("Bon de commande reçu");
     router.refresh();
   }
 
@@ -87,6 +89,7 @@ export function BonCommandeDetailPage({ bdc, reglements }: BonCommandeDetailPage
     const { error } = await supabase.from("bons_commande").update({ statut: "annule" }).eq("id", bdc.id);
     setLoading(false);
     if (error) { toast.error("Erreur lors de l'annulation du bon de commande"); return; }
+    toast.success("Bon de commande annulé");
     router.refresh();
   }
 

@@ -90,7 +90,7 @@ export function ReferenceEditForm({ reference, onClose }: ReferenceEditFormProps
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>}
 
           <div className="flex gap-2">
             <button

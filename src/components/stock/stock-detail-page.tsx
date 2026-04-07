@@ -176,7 +176,8 @@ export function StockDetailPage({
           updated_at: new Date().toISOString(),
         })
         .eq("id", bijou.id),
-      "Erreur lors de la mise à jour du bijou"
+      "Erreur lors de la mise à jour du bijou",
+      "Stock mis à jour"
     );
     setSaving(false);
     if (error) return;
@@ -220,7 +221,8 @@ export function StockDetailPage({
                       const supabase = createClient();
                       const { error } = await mutate(
                         supabase.from("bijoux_stock").update({ statut: "a_fondre" }).eq("id", bijou.id),
-                        "Erreur lors de l'envoi en fonderie"
+                        "Erreur lors de l'envoi en fonderie",
+                        "Stock mis à jour"
                       );
                       if (error) return;
                       router.refresh();

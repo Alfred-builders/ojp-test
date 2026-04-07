@@ -62,7 +62,8 @@ export function VenteLigneCard({ ligne, onEdit, onDelete, canEdit, showLivraison
         .from("vente_lignes")
         .update({ is_livre: !ligne.is_livre })
         .eq("id", ligne.id),
-      "Erreur lors de la mise à jour de la livraison"
+      "Erreur lors de la mise à jour de la livraison",
+      "Ligne de vente mise à jour"
     );
     setToggling(false);
     if (error) return;

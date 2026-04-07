@@ -52,7 +52,8 @@ export function RetourReparationDialog({
           statut: "terminee",
         })
         .eq("id", reparationId),
-      "Erreur lors de la mise à jour de la réparation"
+      "Erreur lors de la mise à jour de la réparation",
+      "Retour de réparation enregistré"
     );
     if (repError) { setSaving(false); return; }
 
@@ -61,7 +62,8 @@ export function RetourReparationDialog({
         .from("bijoux_stock")
         .update({ statut: "en_stock", updated_at: new Date().toISOString() })
         .eq("id", bijouId),
-      "Erreur lors de la remise en stock du bijou"
+      "Erreur lors de la remise en stock du bijou",
+      "Retour de réparation enregistré"
     );
     if (stockError) { setSaving(false); return; }
 

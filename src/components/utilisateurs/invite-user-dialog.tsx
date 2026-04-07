@@ -184,7 +184,7 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
           )}
 
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>
           )}
 
           <DialogFooter>

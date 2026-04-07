@@ -56,12 +56,14 @@ export function BonsCommandeList({ bonsCommande, ungroupedByFonderie }: BonsComm
         .insert({ fonderie_id: group.fonderie_id, numero: "" })
         .select()
         .single(),
-      "Erreur lors de la création du bon de commande"
+      "Erreur lors de la création du bon de commande",
+      "Bon de commande généré"
     );
     if (error || !bdc) { setGenerating(false); return; }
     const { error: updateErr } = await mutate(
       supabase.from("vente_lignes").update({ bon_commande_id: bdc.id }).in("id", group.ligne_ids),
-      "Erreur lors de la mise à jour des lignes"
+      "Erreur lors de la mise à jour des lignes",
+      "Bon de commande généré"
     );
     if (updateErr) { setGenerating(false); return; }
     setGenerating(false);
@@ -78,12 +80,14 @@ export function BonsCommandeList({ bonsCommande, ungroupedByFonderie }: BonsComm
           .insert({ fonderie_id: group.fonderie_id, numero: "" })
           .select()
           .single(),
-        "Erreur lors de la création du bon de commande"
+        "Erreur lors de la création du bon de commande",
+        "Bon de commande généré"
       );
       if (bdcErr || !bdc) break;
       const { error: updateErr } = await mutate(
         supabase.from("vente_lignes").update({ bon_commande_id: bdc.id }).in("id", group.ligne_ids),
-        "Erreur lors de la mise à jour des lignes"
+        "Erreur lors de la mise à jour des lignes",
+        "Bon de commande généré"
       );
       if (updateErr) break;
     }

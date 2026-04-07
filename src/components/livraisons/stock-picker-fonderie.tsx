@@ -141,7 +141,8 @@ export function StockPickerFonderie({ open, onOpenChange, fonderies }: StockPick
         .insert({ fonderie_id: fonderieId, numero: "" })
         .select()
         .single(),
-      "Erreur lors de la création du bon de livraison"
+      "Erreur lors de la création du bon de livraison",
+      "Stock sélectionné"
     );
 
     if (bdlError || !bdl) {
@@ -170,7 +171,8 @@ export function StockPickerFonderie({ open, onOpenChange, fonderies }: StockPick
 
     const { error: lignesError } = await mutate(
       supabase.from("bon_livraison_lignes").insert(lignesPayload),
-      "Erreur lors de la création des lignes du bon de livraison"
+      "Erreur lors de la création des lignes du bon de livraison",
+      "Stock sélectionné"
     );
     if (lignesError) { setSaving(false); return; }
 
@@ -180,7 +182,8 @@ export function StockPickerFonderie({ open, onOpenChange, fonderies }: StockPick
         .from("bijoux_stock")
         .update({ statut: "fondu" })
         .in("id", Array.from(selectedIds)),
-      "Erreur lors de la mise à jour du statut des articles"
+      "Erreur lors de la mise à jour du statut des articles",
+      "Stock sélectionné"
     );
     if (stockError) { setSaving(false); return; }
 

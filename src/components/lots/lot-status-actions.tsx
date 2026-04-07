@@ -40,7 +40,8 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
     setLoading(true);
     const { error } = await mutate(
       supabase.from("lots").update(updates).eq("id", lot.id),
-      "Erreur lors de la mise à jour du statut du lot"
+      "Erreur lors de la mise à jour du statut du lot",
+      "Statut du lot mis à jour"
     );
     setLoading(false);
     if (error) return;
@@ -50,7 +51,8 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
   async function updateAllReferencesStatus(status: string) {
     const { error } = await mutate(
       supabase.from("lot_references").update({ status }).eq("lot_id", lot.id),
-      "Erreur lors de la mise à jour des références"
+      "Erreur lors de la mise à jour des références",
+      "Statut du lot mis à jour"
     );
     return { error };
   }
@@ -65,7 +67,8 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
           setLoading(true);
           const { error } = await mutate(
             supabase.from("lots").update({ updated_at: new Date().toISOString() }).eq("id", lot.id),
-            "Erreur lors de l'enregistrement du lot"
+            "Erreur lors de l'enregistrement du lot",
+            "Statut du lot mis à jour"
           );
           setLoading(false);
           if (error) return;
@@ -168,7 +171,8 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
                     .insert(stockPayload)
                     .select("id")
                     .single(),
-                  "Erreur lors de la création de l'entrée stock bijoux"
+                  "Erreur lors de la création de l'entrée stock bijoux",
+                  "Statut du lot mis à jour"
                 );
                 if (stockError) { hasError = true; break; }
 
@@ -181,7 +185,8 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
                         destination_stock_id: stockEntry.id,
                       })
                       .eq("id", ref.id),
-                    "Erreur lors de la mise à jour de la référence vers le stock"
+                    "Erreur lors de la mise à jour de la référence vers le stock",
+                    "Statut du lot mis à jour"
                   );
                   if (refError) { hasError = true; break; }
                 }
@@ -194,7 +199,8 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
                     p_id: ref.or_investissement_id,
                     p_qty: ref.quantite,
                   }),
-                  "Erreur lors de l'incrémentation du stock or investissement"
+                  "Erreur lors de l'incrémentation du stock or investissement",
+                  "Statut du lot mis à jour"
                 );
                 if (rpcError) { hasError = true; break; }
 
@@ -203,7 +209,8 @@ export function LotStatusActions({ lot }: LotStatusActionsProps) {
                     .from("lot_references")
                     .update({ status: "route_stock" })
                     .eq("id", ref.id),
-                  "Erreur lors de la mise à jour du statut de la référence"
+                  "Erreur lors de la mise à jour du statut de la référence",
+                  "Statut du lot mis à jour"
                 );
                 if (refError) { hasError = true; break; }
               }

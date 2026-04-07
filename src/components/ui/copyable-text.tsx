@@ -31,7 +31,10 @@ export function CopyableText({
       title="Cliquer pour copier"
     >
       {children ?? <span>{value}</span>}
-      <span className="inline-flex items-center overflow-hidden transition-all duration-200 w-0 opacity-0 group-hover:w-5 group-hover:opacity-60">
+      <span className={cn(
+        "inline-flex items-center overflow-hidden transition-all duration-200",
+        copied ? "w-5 opacity-100" : "w-0 opacity-0 group-hover:w-5 group-hover:opacity-60"
+      )}>
         {copied ? (
           <Check weight="bold" className="size-3.5 ml-1.5 shrink-0 text-emerald-500" />
         ) : (

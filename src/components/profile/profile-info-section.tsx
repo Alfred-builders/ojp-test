@@ -183,7 +183,7 @@ export function ProfileInfoSection({ profile, email }: ProfileInfoSectionProps) 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pb-6">
             {error && (
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-150">{error}</p>
             )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
