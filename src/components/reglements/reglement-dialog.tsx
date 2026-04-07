@@ -94,16 +94,36 @@ export function ReglementDialog({ open, onOpenChange, paymentDue, lotId }: Regle
 
     toast.success("Règlement enregistré");
 
+    const newTotal = paymentDue.montant_deja_paye + montantNum;
+    const isFullyPaid = newTotal >= paymentDue.montant_attendu - 0.01;
+
     // If fonderie payment covers the full amount, update bon_commande statut
     if (paymentDue.type === "fonderie" && paymentDue.pre_fill.bon_commande_id) {
-      const newTotal = paymentDue.montant_deja_paye + montantNum;
-      if (newTotal >= paymentDue.montant_attendu) {
+      if (isFullyPaid) {
         const { error: bdcError } = await supabase
           .from("bons_commande")
           .update({ statut: "paye", updated_at: new Date().toISOString() })
           .eq("id", paymentDue.pre_fill.bon_commande_id);
         if (bdcError) { toast.error("Erreur lors de la mise à jour du bon de commande"); }
       }
+    }
+
+    // Update document status when payment covers the full amount
+    const docTypeMap: Record<string, string> = {
+      vente: "facture_vente",
+      acompte: "facture_acompte",
+      solde: "facture_solde",
+      rachat: "quittance_rachat",
+      depot_vente: "quittance_depot_vente",
+    };
+    const docType = docTypeMap[paymentDue.type];
+    if (docType && isFullyPaid) {
+      await supabase
+        .from("documents")
+        .update({ status: "regle" })
+        .eq("lot_id", lotId)
+        .eq("type", docType)
+        .neq("status", "regle");
     }
 
     setSaving(false);
