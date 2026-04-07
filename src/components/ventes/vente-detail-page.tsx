@@ -78,9 +78,10 @@ interface VenteDetailPageProps {
   fonderies?: Fonderie[];
   reglements?: Reglement[];
   bonsCommande?: BonCommande[];
+  documents?: import("@/types/document").DocumentRecord[];
 }
 
-export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = [], reglements = [], bonsCommande = [] }: VenteDetailPageProps) {
+export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = [], reglements = [], bonsCommande = [], documents = [] }: VenteDetailPageProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [showFormOrInvest, setShowFormOrInvest] = useState(false);
@@ -111,6 +112,7 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
     lignes: lot.lignes,
     reglements,
     bonsCommande,
+    documents,
     clientId: lot.dossier.client.id,
     acompte_pct: acomptePct,
   });

@@ -34,6 +34,13 @@ export async function executeAccepterDevisLot(
   );
   if (e2) return { success: false };
 
+  // Mark devis documents as accepted
+  await supabase
+    .from("documents")
+    .update({ status: "accepte" })
+    .eq("lot_id", ctx.lot.id)
+    .eq("type", "devis_rachat");
+
   triggerEmail({
     notification_type: "interne_devis_accepte",
     lot_id: ctx.lot.id,
@@ -56,6 +63,14 @@ export async function executeRefuserDevisLot(
     "Lot refuse"
   );
   if (error) return { success: false };
+
+  // Mark devis documents as refused
+  await supabase
+    .from("documents")
+    .update({ status: "refuse" })
+    .eq("lot_id", ctx.lot.id)
+    .eq("type", "devis_rachat");
+
   return { success: true };
 }
 
@@ -103,6 +118,13 @@ export async function executeFinaliserRachat(
       await generateQuittanceRachat(ctx, bijouxRefs);
     }
   }
+
+  // Mark contracts as signed
+  await supabase
+    .from("documents")
+    .update({ status: "signe" })
+    .eq("lot_id", ctx.lot.id)
+    .in("type", ["contrat_rachat", "contrat_depot_vente", "confie_achat"]);
 
   triggerEmail({
     notification_type: "contrat_rachat_finalise",

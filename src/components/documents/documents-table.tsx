@@ -20,7 +20,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
-import type { DocumentRecord, DocumentType } from "@/types/document";
+import type { DocumentRecord, DocumentType, DocumentStatus } from "@/types/document";
 
 const TYPE_CONFIG: Record<DocumentType, { label: string; className: string }> = {
   quittance_rachat: {
@@ -69,6 +69,33 @@ const TYPE_CONFIG: Record<DocumentType, { label: string; className: string }> = 
   },
 };
 
+const STATUS_CONFIG: Record<DocumentStatus, { label: string; className: string }> = {
+  en_attente: {
+    label: "En attente",
+    className: "bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400",
+  },
+  accepte: {
+    label: "Accepté",
+    className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
+  refuse: {
+    label: "Refusé",
+    className: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400",
+  },
+  signe: {
+    label: "Signé",
+    className: "bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400",
+  },
+  regle: {
+    label: "Réglé",
+    className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
+  emis: {
+    label: "Émis",
+    className: "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-800",
+  },
+};
+
 function getStorageUrl(path: string): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   return `${supabaseUrl}/storage/v1/object/public/documents/${path}`;
@@ -100,6 +127,7 @@ export function DocumentsTable({ documents, title = "Documents", rowActions }: D
               <TableRow className="bg-transparent hover:bg-transparent">
                 <TableHead className="pl-4">Numéro</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="w-10 pr-4" />
               </TableRow>
@@ -117,6 +145,11 @@ export function DocumentsTable({ documents, title = "Documents", rowActions }: D
                     <TableCell>
                       <Badge variant="secondary" className={config.className}>
                         {config.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={STATUS_CONFIG[doc.status].className}>
+                        {STATUS_CONFIG[doc.status].label}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(doc.created_at)}</TableCell>

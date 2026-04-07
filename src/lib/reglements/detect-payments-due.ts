@@ -2,6 +2,7 @@ import type { Lot, LotReference } from "@/types/lot";
 import type { VenteLigne } from "@/types/vente";
 import type { Reglement, ReglementType, ReglementSens } from "@/types/reglement";
 import type { BonCommande } from "@/types/bon-commande";
+import type { DocumentRecord } from "@/types/document";
 
 export interface PaymentDuePreFill {
   type: ReglementType;
@@ -10,6 +11,7 @@ export interface PaymentDuePreFill {
   client_id?: string;
   fonderie_id?: string;
   bon_commande_id?: string;
+  document_id?: string;
 }
 
 export interface PaymentDue {
@@ -30,12 +32,27 @@ function sumReglements(reglements: Reglement[], type: ReglementType): number {
     .reduce((sum, r) => sum + r.montant, 0);
 }
 
+const DOC_TYPE_MAP: Record<string, string> = {
+  vente: "facture_vente",
+  acompte: "facture_acompte",
+  solde: "facture_solde",
+  rachat: "quittance_rachat",
+  depot_vente: "quittance_depot_vente",
+};
+
+function findDocumentId(documents: DocumentRecord[], lotId: string, reglementType: string): string | undefined {
+  const docType = DOC_TYPE_MAP[reglementType];
+  if (!docType) return undefined;
+  return documents.find((d) => d.lot_id === lotId && d.type === docType)?.id;
+}
+
 interface DetectParams {
   lot: Lot;
   lignes?: VenteLigne[];
   lotReferences?: LotReference[];
   reglements: Reglement[];
   bonsCommande?: BonCommande[];
+  documents?: DocumentRecord[];
   clientId?: string;
   acompte_pct?: number;
 }
@@ -46,6 +63,7 @@ export function detectPaymentsDue({
   lotReferences = [],
   reglements,
   bonsCommande = [],
+  documents = [],
   clientId,
   acompte_pct = 10,
 }: DetectParams): PaymentDue[] {
@@ -70,6 +88,7 @@ export function detectPaymentsDue({
         sens: "sortant",
         montant: restant,
         client_id: clientId,
+        document_id: findDocumentId(documents, lot.id, "rachat"),
       },
     });
   }
@@ -102,6 +121,7 @@ export function detectPaymentsDue({
           sens: "entrant",
           montant: restant,
           client_id: clientId,
+          document_id: findDocumentId(documents, lot.id, "vente"),
         },
       });
     }
@@ -133,6 +153,7 @@ export function detectPaymentsDue({
           sens: "entrant",
           montant: acompteRestant,
           client_id: clientId,
+          document_id: findDocumentId(documents, lot.id, "acompte"),
         },
       });
 
@@ -154,6 +175,7 @@ export function detectPaymentsDue({
             sens: "entrant",
             montant: soldeRestant,
             client_id: clientId,
+            document_id: findDocumentId(documents, lot.id, "solde"),
           },
         });
       }
@@ -184,6 +206,7 @@ export function detectPaymentsDue({
           sens: "sortant",
           montant: restant,
           client_id: clientId,
+          document_id: findDocumentId(documents, lot.id, "depot_vente"),
         },
       });
     }

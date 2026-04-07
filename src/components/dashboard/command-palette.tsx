@@ -43,13 +43,14 @@ interface QuickAction {
   label: string;
   url: string;
   icon: typeof Plus;
+  iconWeight?: "regular" | "duotone";
   shortcut?: string;
   group: "actions" | "navigation";
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { id: "new-client", label: "Nouveau client", url: "/clients/new", icon: Plus, group: "actions" },
-  { id: "new-dossier", label: "Nouveau dossier", url: "/dossiers/new", icon: Plus, shortcut: "⌘⇧N", group: "actions" },
+  { id: "new-client", label: "Nouveau client", url: "/clients/new", icon: Plus, iconWeight: "regular", group: "actions" },
+  { id: "new-dossier", label: "Nouveau dossier", url: "/dossiers/new", icon: Plus, iconWeight: "regular", shortcut: "⌘⇧N", group: "actions" },
   { id: "nav-dashboard", label: "Aller au tableau de bord", url: "/dashboard", icon: SquaresFour, shortcut: "Alt+D", group: "navigation" },
   { id: "nav-lots", label: "Aller aux lots", url: "/lots", icon: ShoppingCart, shortcut: "Alt+L", group: "navigation" },
   { id: "nav-stock", label: "Aller au stock", url: "/stock", icon: Diamond, shortcut: "Alt+S", group: "navigation" },
@@ -188,7 +189,7 @@ export function CommandPalette() {
                   onClick={() => navigate(action.url)}
                   onMouseEnter={() => setActiveIndex(idx)}
                 >
-                  <Icon size={16} weight="duotone" className="shrink-0 text-muted-foreground" />
+                  <Icon size={16} weight={action.iconWeight ?? "duotone"} className="shrink-0 text-muted-foreground" />
                   <span className="flex-1 font-medium">{action.label}</span>
                   {action.shortcut && (
                     <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
@@ -225,7 +226,7 @@ export function CommandPalette() {
                   onClick={() => navigate(action.url)}
                   onMouseEnter={() => setActiveIndex(idx)}
                 >
-                  <Icon size={16} weight="duotone" className="shrink-0 text-muted-foreground" />
+                  <Icon size={16} weight={action.iconWeight ?? "duotone"} className="shrink-0 text-muted-foreground" />
                   <span className="flex-1 font-medium">{action.label}</span>
                   {action.shortcut && (
                     <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">

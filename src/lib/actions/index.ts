@@ -2,6 +2,8 @@ export type {
   ActionId,
   LotActionId,
   RefActionId,
+  PaymentActionId,
+  VenteActionId,
   LotAction,
   ActionCategory,
   ActionPriority,

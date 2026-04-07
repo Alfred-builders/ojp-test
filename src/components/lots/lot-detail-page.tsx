@@ -113,6 +113,7 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
     lot,
     lotReferences: lot.references,
     reglements,
+    documents,
     clientId: lot.dossier.client.id,
     acompte_pct: acomptePct,
   });
@@ -128,7 +129,7 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
     retractationMs,
   };
 
-  const availableActions = getAvailableActions(lot);
+  const availableActions = getAvailableActions({ lot, documents, paymentsDue });
 
   // ── Reference-level action handlers (delegated to action engine) ──
   async function handleRefAction(actionId: "ref.valider_rachat" | "ref.retracter" | "ref.accepter_devis" | "ref.refuser_devis" | "ref.restituer", refId: string) {

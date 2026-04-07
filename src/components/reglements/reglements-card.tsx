@@ -93,7 +93,7 @@ export function ReglementsCard({ lotId, reglements, paymentsDue }: ReglementsCar
 
   return (
     <>
-      <Card>
+      <Card id="reglements">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Receipt size={18} weight="duotone" />

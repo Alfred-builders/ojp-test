@@ -100,7 +100,7 @@ export function DossierDetailPage({
   dossier: DossierWithClient;
   lots: Lot[];
   parametres: Parametres;
-  documents?: import("@/types/document").DocumentRecord[];
+  documents?: import("@/types/document").DocumentWithRefs[];
   reglements?: Reglement[];
   venteLignes?: VenteLigne[];
   lotReferences?: LotReference[];

@@ -225,6 +225,13 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
     );
     if (errLot) return;
 
+    // Mark facture documents as paid
+    await supabase
+      .from("documents")
+      .update({ status: "regle" })
+      .eq("lot_id", lot.id)
+      .in("type", ["facture_vente", "facture_solde"]);
+
     setShowTerminer(false);
     router.refresh();
     } catch (err) {

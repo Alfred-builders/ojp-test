@@ -206,6 +206,7 @@ async function processRachatLot({
       dossier: dossierInfo,
       references: buildRefLignes(bijouxDirect),
       totaux: buildTotaux(bijouxDirect),
+      lotReferenceIds: bijouxDirect.map((r: { id: string }) => r.id),
     });
   }
 
@@ -219,6 +220,7 @@ async function processRachatLot({
       dossier: dossierInfo,
       references: buildRefLignes(orInvestDirect),
       totaux: buildTotaux(orInvestDirect),
+      lotReferenceIds: orInvestDirect.map((r: { id: string }) => r.id),
     });
   }
 
@@ -232,6 +234,7 @@ async function processRachatLot({
       dossier: dossierInfo,
       references: buildRefLignes(devisRefs),
       totaux: buildTotaux(devisRefs),
+      lotReferenceIds: devisRefs.map((r: { id: string }) => r.id),
     });
     if (devisPath) {
       triggerEmail({
@@ -362,6 +365,7 @@ async function processDepotVenteLot({
     numeroLot: lot.numero,
     references: [],
     totaux: { totalBrut: 0, taxe: 0, netAPayer: 0 },
+    lotReferenceIds: allDvRefs.map((r: { id: string }) => r.id),
   });
   if (dvContratPath) {
     triggerEmail({
@@ -397,6 +401,7 @@ async function processDepotVenteLot({
         taxe: 0,
         netAPayer: ref.prix_revente_estime ?? 0,
       },
+      lotReferenceIds: [ref.id],
     });
   }
 

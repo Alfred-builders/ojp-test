@@ -76,6 +76,7 @@ export function ReglementDialog({ open, onOpenChange, paymentDue, lotId }: Regle
     const { error: insertError } = await supabase.from("reglements").insert({
       lot_id: lotId,
       bon_commande_id: paymentDue.pre_fill.bon_commande_id ?? null,
+      document_id: paymentDue.pre_fill.document_id ?? null,
       sens: paymentDue.sens,
       type: paymentDue.type,
       montant: montantNum,
@@ -109,20 +110,11 @@ export function ReglementDialog({ open, onOpenChange, paymentDue, lotId }: Regle
     }
 
     // Update document status when payment covers the full amount
-    const docTypeMap: Record<string, string> = {
-      vente: "facture_vente",
-      acompte: "facture_acompte",
-      solde: "facture_solde",
-      rachat: "quittance_rachat",
-      depot_vente: "quittance_depot_vente",
-    };
-    const docType = docTypeMap[paymentDue.type];
-    if (docType && isFullyPaid) {
+    if (paymentDue.pre_fill.document_id && isFullyPaid) {
       await supabase
         .from("documents")
         .update({ status: "regle" })
-        .eq("lot_id", lotId)
-        .eq("type", docType)
+        .eq("id", paymentDue.pre_fill.document_id)
         .neq("status", "regle");
     }
 

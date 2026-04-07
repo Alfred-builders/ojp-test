@@ -90,6 +90,8 @@ export interface GenerateDocumentParams {
   bonCommandeTotalHT?: number;
   // Link to related document
   referenceNumero?: string;
+  // IDs of lot_references included in this document (for document_references junction)
+  lotReferenceIds?: string[];
 }
 
 export async function generateAndStoreDocument(params: GenerateDocumentParams): Promise<string | null> {
@@ -204,6 +206,10 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     return null;
   }
 
+  // Determine initial document status based on type
+  const emittedTypes = ["quittance_rachat", "quittance_depot_vente", "bon_commande"];
+  const initialStatus = emittedTypes.includes(type) ? "emis" : "en_attente";
+
   // Create document record in DB
   const { error: dbError } = await supabase.from("documents").insert({
     type,
@@ -212,6 +218,7 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     dossier_id: dossierId,
     client_id: clientId,
     storage_path: storagePath,
+    status: initialStatus,
     reference_numero: params.referenceNumero ?? null,
   });
 
@@ -219,6 +226,23 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     console.error("DB error:", dbError);
     await supabase.storage.from("documents").remove([storagePath]);
     return null;
+  }
+
+  // Link document to lot_references if IDs provided
+  if (params.lotReferenceIds && params.lotReferenceIds.length > 0) {
+    const { data: docRecord } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("storage_path", storagePath)
+      .single();
+
+    if (docRecord) {
+      const links = params.lotReferenceIds.map((refId) => ({
+        document_id: docRecord.id,
+        lot_reference_id: refId,
+      }));
+      await supabase.from("document_references").insert(links);
+    }
   }
 
   return storagePath;
@@ -274,6 +298,7 @@ export async function generateAndStoreBonLivraison(
     type,
     numero,
     storage_path: storagePath,
+    status: "emis",
     bon_livraison_id: bonLivraisonId,
   });
 

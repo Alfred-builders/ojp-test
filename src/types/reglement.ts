@@ -6,6 +6,7 @@ export interface Reglement {
   id: string;
   lot_id: string;
   bon_commande_id: string | null;
+  document_id: string | null;
   sens: ReglementSens;
   type: ReglementType;
   montant: number;

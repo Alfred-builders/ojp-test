@@ -27,6 +27,8 @@ interface CommandePageClientProps {
     count: number;
   }>;
   fonderies?: Fonderie[];
+  /** Masquer l'onglet "Envois fonderie" (utilisé dans le dialog d'actions) */
+  hideEnvois?: boolean;
 }
 
 const TAB_ACTIVE = "bg-background text-foreground shadow-sm";
@@ -39,6 +41,7 @@ export function CommandePageClient({
   reglements = [],
   ungroupedByFonderie = [],
   fonderies = [],
+  hideEnvois = false,
 }: CommandePageClientProps) {
   const [section, setSection] = useState<"achats" | "envois">("achats");
   const [generateFn, setGenerateFn] = useState<(() => void) | null>(null);
@@ -76,20 +79,22 @@ export function CommandePageClient({
               </span>
             )}
           </button>
-          <button
-            onClick={() => setSection("envois")}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              section === "envois" ? TAB_ACTIVE : TAB_INACTIVE
-            }`}
-          >
-            <Factory size={14} weight="duotone" />
-            Envois fonderie
-            {pendingEnvois > 0 && (
-              <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
-                {pendingEnvois}
-              </span>
-            )}
-          </button>
+          {!hideEnvois && (
+            <button
+              onClick={() => setSection("envois")}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                section === "envois" ? TAB_ACTIVE : TAB_INACTIVE
+              }`}
+            >
+              <Factory size={14} weight="duotone" />
+              Envois fonderie
+              {pendingEnvois > 0 && (
+                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                  {pendingEnvois}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Generate BDC button (achats only) */}

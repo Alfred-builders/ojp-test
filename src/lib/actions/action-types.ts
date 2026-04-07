@@ -1,5 +1,6 @@
 import type { LotWithReferences, LotReference } from "@/types/lot";
 import type { DossierWithClient } from "@/types/dossier";
+import type { PaymentDue } from "@/lib/reglements/detect-payments-due";
 
 // ── Action IDs ──────────────────────────────────────────────
 
@@ -20,11 +21,23 @@ export type RefActionId =
   | "ref.refuser_devis"
   | "ref.restituer";
 
-export type ActionId = LotActionId | RefActionId;
+export type PaymentActionId =
+  | "payment.rachat"
+  | "payment.vente"
+  | "payment.acompte"
+  | "payment.solde"
+  | "payment.depot_vente"
+  | "payment.fonderie";
+
+export type VenteActionId =
+  | "vente.terminer"
+  | "vente.livrer";
+
+export type ActionId = LotActionId | RefActionId | PaymentActionId | VenteActionId;
 
 // ── Action metadata ─────────────────────────────────────────
 
-export type ActionCategory = "transition" | "document" | "stock" | "notification";
+export type ActionCategory = "transition" | "payment" | "delivery" | "document" | "stock" | "notification";
 export type ActionPriority = "urgent" | "normal" | "info";
 export type ActionVariant = "default" | "destructive" | "secondary";
 
@@ -38,9 +51,15 @@ export interface LotAction {
   variant: ActionVariant;
   disabled?: boolean;
   disabledReason?: string;
-  scope: "lot" | "reference";
+  scope: "lot" | "reference" | "payment";
   referenceId?: string;
   referenceDesignation?: string;
+  /** Document ID this action relates to (for scoped ref updates) */
+  documentId?: string;
+  /** For payment actions: link to the lot page to record payment */
+  lotHref?: string;
+  /** For payment actions: amount info */
+  paymentDue?: PaymentDue;
 }
 
 // ── Execution context ───────────────────────────────────────

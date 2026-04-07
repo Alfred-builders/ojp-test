@@ -327,7 +327,7 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
       </div>
 
       {/* Table */}
-      <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
+      <div className="min-h-0 max-h-[60vh] overflow-auto rounded-lg border bg-white dark:bg-card">
         <Table className={paginatedData.length === 0 ? "h-full" : ""}>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow className="bg-transparent hover:bg-transparent">
@@ -390,38 +390,22 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
                             className="shrink-0"
                           >
                             <Package size={14} weight="duotone" />
-                            Stock
+                            Ajouter du stock
                           </Button>
-                          {assigned ? (
-                            <Select
-                              value={assigned}
-                              onValueChange={(v) => { if (v) handleAssignFonderie(ligne.id, String(v)); }}
-                            >
-                              <SelectTrigger className="h-7 w-full text-xs">
-                                <Factory size={12} weight="duotone" />
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="min-w-[200px]">
-                                {fonderies.map((f) => (
-                                  <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Select
-                              onValueChange={(v) => { if (v) handleAssignFonderie(ligne.id, String(v)); }}
-                            >
-                              <SelectTrigger className="h-7 w-full text-xs">
-                                <Factory size={12} weight="duotone" />
-                                <SelectValue placeholder="Fonderie" />
-                              </SelectTrigger>
-                              <SelectContent className="min-w-[200px]">
-                                {fonderies.map((f) => (
-                                  <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
+                          <Select
+                            value={assigned ?? ""}
+                            onValueChange={(v) => { if (v) handleAssignFonderie(ligne.id, String(v)); }}
+                          >
+                            <SelectTrigger className="h-7 w-full text-[0.8rem] font-medium !border-border !bg-background hover:!bg-muted !text-foreground dark:!border-input dark:!bg-input/30 dark:hover:!bg-input/50">
+                              <Factory size={14} weight="duotone" />
+                              {assigned ? fonderieMap[assigned] ?? "Fonderie" : "Commander en fonderie"}
+                            </SelectTrigger>
+                            <SelectContent className="min-w-[200px]">
+                              {fonderies.map((f) => (
+                                <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </TableCell>
                     </TableRow>

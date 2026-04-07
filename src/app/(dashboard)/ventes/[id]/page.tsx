@@ -20,7 +20,7 @@ export default async function VentePage({ params }: { params: Promise<{ id: stri
 
   if (!lot) return notFound();
 
-  const [lignesRes, factureRes, fonderiesRes, reglementsRes] = await Promise.all([
+  const [lignesRes, factureRes, fonderiesRes, reglementsRes, documentsRes] = await Promise.all([
     supabase
       .from("vente_lignes")
       .select("*")
@@ -40,6 +40,11 @@ export default async function VentePage({ params }: { params: Promise<{ id: stri
       .select("*")
       .eq("lot_id", id)
       .order("date_reglement", { ascending: true }),
+    supabase
+      .from("documents")
+      .select("*")
+      .eq("lot_id", id)
+      .order("created_at", { ascending: true }),
   ]);
 
   // Fetch bons de commande for fonderie lines on this lot
@@ -88,6 +93,7 @@ export default async function VentePage({ params }: { params: Promise<{ id: stri
       fonderies={fonderies}
       reglements={(reglementsRes.data ?? []) as Reglement[]}
       bonsCommande={bonsCommande}
+      documents={documentsRes.data ?? []}
     />
   );
 }

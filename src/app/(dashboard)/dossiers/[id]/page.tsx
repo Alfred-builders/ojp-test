@@ -4,7 +4,7 @@ import { getParametres } from "@/lib/parametres";
 import { DossierDetailPage } from "@/components/dossiers/dossier-detail-page";
 import type { DossierWithClient } from "@/types/dossier";
 import type { Lot } from "@/types/lot";
-import type { DocumentRecord } from "@/types/document";
+import type { DocumentWithRefs } from "@/types/document";
 import type { Reglement } from "@/types/reglement";
 import type { VenteLigne } from "@/types/vente";
 import type { LotReference } from "@/types/lot";
@@ -34,7 +34,7 @@ export default async function DossierDetailRoute({
 
   const { data: documents } = await supabase
     .from("documents")
-    .select("*")
+    .select("*, document_references(id, document_id, lot_reference_id)")
     .eq("dossier_id", id)
     .order("created_at", { ascending: false });
 
@@ -94,7 +94,7 @@ export default async function DossierDetailRoute({
       dossier={dossier as DossierWithClient}
       lots={(lots ?? []) as Lot[]}
       parametres={parametres}
-      documents={(documents ?? []) as DocumentRecord[]}
+      documents={(documents ?? []) as DocumentWithRefs[]}
       reglements={reglements}
       venteLignes={venteLignes}
       lotReferences={lotReferences}
