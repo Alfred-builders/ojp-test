@@ -322,8 +322,8 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
           <div className="flex items-center gap-1 shrink-0">
             {row.lotHref ? (
               <>
-                <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}>Accepter</Button>
-                <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}>Refuser</Button>
+                <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><CheckCircle size={14} weight="duotone" />Accepter</Button>
+                <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><XCircle size={14} weight="duotone" />Refuser</Button>
               </>
             ) : (
               <>
@@ -343,7 +343,7 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
             <span className="text-sm truncate">{row.label}</span>
           </div>
           {row.lotHref ? (
-            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}>Se rétracte</Button>
+            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><ArrowCounterClockwise size={14} weight="duotone" />Se rétracte</Button>
           ) : (
             <ActionButton action={{ ...row.flat.action, variant: "outline" }} ctx={row.flat.ctx} />
           )}

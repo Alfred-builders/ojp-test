@@ -41,6 +41,7 @@ import { DossierRecapFinancier } from "@/components/dossiers/dossier-recap-finan
 import { DossierLotsSection } from "@/components/dossiers/dossier-lots-section";
 import { ActionDashboard } from "@/components/actions/action-dashboard";
 import { finaliserDossier } from "@/components/dossiers/dossier-finalization";
+import { generateVenteFactures } from "@/lib/pdf/pdf-actions";
 import type { DossierWithClient, DossierStatus } from "@/types/dossier";
 import type { Lot, LotReference, LotWithReferences } from "@/types/lot";
 import type { VenteLigne } from "@/types/vente";
@@ -130,6 +131,8 @@ export function DossierDetailPage({
   async function handleSave() {
     setSaving(true);
     const supabase = createClient();
+    const goingEnCours = dossier.status === "brouillon" && status === "en_cours";
+
     const { error } = await supabase
       .from("dossiers")
       .update({
@@ -138,8 +141,22 @@ export function DossierDetailPage({
         updated_at: new Date().toISOString(),
       })
       .eq("id", dossier.id);
+
+    if (error) { setSaving(false); toast.error("Erreur lors de l'enregistrement du dossier"); return; }
+
+    // When transitioning to en_cours, pass vente lots to en_cours and generate factures
+    if (goingEnCours) {
+      const venteLots = lots.filter((l) => l.type === "vente" && l.status === "brouillon");
+      for (const vLot of venteLots) {
+        await supabase.from("lots").update({ status: "en_cours" }).eq("id", vLot.id);
+        const result = await generateVenteFactures(vLot.id);
+        if (!result.success) {
+          toast.error(`Erreur génération factures: ${result.error}`);
+        }
+      }
+    }
+
     setSaving(false);
-    if (error) { toast.error("Erreur lors de l'enregistrement du dossier"); return; }
     toast.success("Dossier mis à jour");
     setEditing(false);
     setEditingNotes(false);
