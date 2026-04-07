@@ -256,7 +256,7 @@ export function DossierCreateDialog({ open, onOpenChange, validClients: initialC
               <p className="text-xs text-muted-foreground">
                 Seuls les clients avec une pièce d&apos;identité valide sont affichés.
               </p>
-              <Select value={clientId} onValueChange={setClientId}>
+              <Select value={clientId} onValueChange={(v) => setClientId(v ?? "")}>
                 <SelectTrigger>
                   {selectedClient
                     ? <span className="truncate">{`${selectedClient.civility === "M" ? "M." : "Mme"} ${selectedClient.first_name} ${selectedClient.last_name}`}</span>
