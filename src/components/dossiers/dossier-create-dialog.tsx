@@ -346,7 +346,7 @@ export function DossierCreateDialog({ open, onOpenChange, validClients: initialC
               </CardHeader>
               <CardContent className="space-y-3">
                 <FormField label="Civilité *" error={clientErrors.civility}>
-                  <Select value={civility} onValueChange={setCivility}>
+                  <Select value={civility} onValueChange={(v) => setCivility(v ?? "")}>
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
@@ -384,7 +384,7 @@ export function DossierCreateDialog({ open, onOpenChange, validClients: initialC
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <FormField label="Type de document *" error={clientErrors.doc_type}>
-                    <Select value={docType} onValueChange={setDocType}>
+                    <Select value={docType} onValueChange={(v) => setDocType(v ?? "")}>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner" />
                       </SelectTrigger>
@@ -433,7 +433,7 @@ export function DossierCreateDialog({ open, onOpenChange, validClients: initialC
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <FormField label="Source" error={clientErrors.lead_source}>
-                    <Select value={leadSource} onValueChange={setLeadSource}>
+                    <Select value={leadSource} onValueChange={(v) => setLeadSource(v ?? "")}>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une source" />
                       </SelectTrigger>
