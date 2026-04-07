@@ -39,7 +39,7 @@ export type ActionId = LotActionId | RefActionId | PaymentActionId | VenteAction
 
 export type ActionCategory = "transition" | "payment" | "delivery" | "document" | "stock" | "notification";
 export type ActionPriority = "urgent" | "normal" | "info";
-export type ActionVariant = "default" | "destructive" | "secondary";
+export type ActionVariant = "default" | "destructive" | "secondary" | "outline";
 
 export interface LotAction {
   id: ActionId;

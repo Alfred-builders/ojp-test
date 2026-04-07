@@ -192,7 +192,13 @@ export function ReglementDialog({ open, onOpenChange, paymentDue, lotId }: Regle
             <Label>Mode de reglement</Label>
             <Select value={mode} onValueChange={(v) => setMode(v as ModeReglement)}>
               <SelectTrigger>
-                <SelectValue placeholder="Choisir un mode" />
+                {mode ? (
+                  <span className="flex items-center gap-2">
+                    {(() => { const opt = MODE_OPTIONS.find(o => o.value === mode); if (!opt) return null; const Icon = opt.icon; return <><Icon size={14} weight="duotone" />{opt.label}</>; })()}
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Choisir un mode" />
+                )}
               </SelectTrigger>
               <SelectContent>
                 {MODE_OPTIONS.map((opt) => {

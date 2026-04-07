@@ -27,6 +27,7 @@ export interface FinaliserDossierParams {
 
 export interface FinaliserDossierResult {
   success: boolean;
+  error?: string;
 }
 
 function buildClientInfo(dossier: DossierWithClient): ClientInfo {
@@ -51,19 +52,19 @@ export async function finaliserDossier({
   for (const lot of brouillonLots) {
     if (lot.type === "rachat") {
       const result = await processRachatLot({ lot, dossier, supabase, now, delai48h });
-      if (!result.success) return { success: false };
+      if (!result.success) return result;
       continue;
     }
 
     if (lot.type === "depot_vente") {
       const result = await processDepotVenteLot({ lot, dossier, supabase, now });
-      if (!result.success) return { success: false };
+      if (!result.success) return result;
       continue;
     }
 
     if (lot.type === "vente") {
       const result = await processVenteLot({ lot, dossier, supabase, now });
-      if (!result.success) return { success: false };
+      if (!result.success) return result;
       continue;
     }
   }
@@ -86,7 +87,7 @@ export async function finaliserDossier({
     "Erreur lors de la mise à jour du statut du dossier",
     "Dossier finalisé"
   );
-  if (dossierError) return { success: false };
+  if (dossierError) return { success: false, error: "Erreur mise à jour statut dossier" };
 
   return { success: true };
 }
@@ -432,12 +433,21 @@ async function processVenteLot({
   supabase: SupabaseClient;
   now: Date;
 }): Promise<FinaliserDossierResult> {
-  const { data: lignes } = await supabase
+  const { data: lignes, error: lignesError } = await supabase
     .from("vente_lignes")
     .select("*")
     .eq("lot_id", lot.id);
 
+  if (lignesError) {
+    console.error("[FINALIZE] Erreur fetch vente_lignes:", lignesError);
+    return { success: false, error: "Erreur lors de la récupération des lignes de vente" };
+  }
+
   const allLignes = lignes ?? [];
+  if (allLignes.length === 0) {
+    return { success: false, error: `Aucune ligne de vente pour le lot ${lot.numero}` };
+  }
+
   const bijouxLignes = allLignes.filter((l: VenteLigne) => !!l.bijoux_stock_id);
   const orInvestLignes = allLignes.filter((l: VenteLigne) => !!l.or_investissement_id);
 
@@ -461,6 +471,8 @@ async function processVenteLot({
     date: dateStr,
     heure: heureStr,
   };
+
+  const docErrors: string[] = [];
 
   if (bijouxLignes.length > 0) {
     const factureLignes: FactureVenteLigne[] = bijouxLignes.map((l: VenteLigne) => ({
@@ -498,6 +510,9 @@ async function processVenteLot({
         client_id: dossier.client.id,
         attachment_paths: [facturePath],
       });
+    } else {
+      console.error("[FINALIZE] facture_vente failed for lot:", lot.id);
+      docErrors.push("facture_vente");
     }
   }
 
@@ -545,6 +560,9 @@ async function processVenteLot({
         client_id: dossier.client.id,
         attachment_paths: [acomptePath],
       });
+    } else {
+      console.error("[FINALIZE] facture_acompte failed for lot:", lot.id);
+      docErrors.push("facture_acompte");
     }
 
     const { data: acompteDoc } = await supabase
@@ -585,6 +603,9 @@ async function processVenteLot({
         client_id: dossier.client.id,
         attachment_paths: [soldePath],
       });
+    } else {
+      console.error("[FINALIZE] facture_solde failed for lot:", lot.id);
+      docErrors.push("facture_solde");
     }
 
     {
@@ -595,8 +616,12 @@ async function processVenteLot({
         }).eq("id", lot.id),
         "Erreur lors de la mise à jour de l'acompte du lot"
       );
-      if (error) return { success: false };
+      if (error) return { success: false, error: "Erreur mise à jour acompte" };
     }
+  }
+
+  if (docErrors.length > 0) {
+    return { success: false, error: `Echec génération documents: ${docErrors.join(", ")}` };
   }
 
   {
@@ -607,7 +632,7 @@ async function processVenteLot({
         .eq("id", lot.id),
       "Erreur lors du passage du lot vente en cours"
     );
-    if (error) return { success: false };
+    if (error) return { success: false, error: "Erreur passage lot en cours" };
   }
 
   return { success: true };

@@ -56,7 +56,7 @@ export function ActionButton({ action, ctx, size = "sm", onComplete }: ActionBut
   return (
     <Button
       size={size}
-      variant={action.variant === "destructive" ? "destructive" : action.variant === "secondary" ? "ghost" : "default"}
+      variant={action.variant === "destructive" ? "destructive" : action.variant === "outline" ? "outline" : action.variant === "secondary" ? "ghost" : "default"}
       disabled={loading || action.disabled}
       onClick={handleClick}
       title={action.disabledReason}

@@ -1,0 +1,14 @@
+-- Reset test data for re-testing finalization flow
+ALTER TABLE lots DISABLE TRIGGER validate_lot_status_transition_trigger;
+ALTER TABLE dossiers DISABLE TRIGGER validate_dossier_status_transition_trigger;
+
+DELETE FROM document_references;
+DELETE FROM documents;
+DELETE FROM reglements;
+
+UPDATE lot_references SET status = 'en_expertise', date_envoi = NULL, date_fin_delai = NULL;
+UPDATE lots SET status = 'brouillon', acompte_montant = NULL, date_limite_solde = NULL;
+UPDATE dossiers SET status = 'brouillon';
+
+ALTER TABLE lots ENABLE TRIGGER validate_lot_status_transition_trigger;
+ALTER TABLE dossiers ENABLE TRIGGER validate_dossier_status_transition_trigger;

@@ -56,13 +56,17 @@ interface CommandeRefTableProps {
   onGenerateReady: (fn: (() => void) | null, canGenerate: boolean, count: number, generating: boolean) => void;
 }
 
-export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeRefTableProps) {
+export function CommandeRefTable({ data: initialData, fonderies, onGenerateReady }: CommandeRefTableProps) {
   const router = useRouter();
+  const [data, setData] = useState(initialData);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
+
+  // Sync with parent prop when it changes
+  useEffect(() => { setData(initialData); }, [initialData]);
 
   // Fonderie assignments: ligne.id → fonderie_id
   const [fonderieAssignments, setFonderieAssignments] = useState<Record<string, string>>({});
@@ -138,6 +142,7 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
         );
         if (rpcErr) return;
       }
+      setData((prev) => prev.map((l) => l.id === ligne.id ? { ...l, fulfillment: "servi_stock" } : l));
       router.refresh();
     } catch (err) {
       console.error("Erreur lors du service depuis le stock:", err);
@@ -305,6 +310,10 @@ export function CommandeRefTable({ data, fonderies, onGenerateReady }: CommandeR
         });
       }
     }
+
+    // Update local state: mark processed lines as "commande"
+    const processedIds = new Set(Object.keys(fonderieAssignments));
+    setData((prev) => prev.map((l) => processedIds.has(l.id) ? { ...l, fulfillment: "commande" } : l));
 
     setFonderieAssignments({});
     setGenerating(false);

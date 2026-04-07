@@ -52,16 +52,24 @@ export async function generateQuittanceRachat(
 ): Promise<string | null> {
   if (bijouxRefs.length === 0) return null;
   const now = new Date();
-  return generateDocument({
-    type: "quittance_rachat",
-    lotId: ctx.lot.id,
-    dossierId: ctx.dossier.id,
-    clientId: ctx.dossier.client.id,
-    client: buildClientInfo(ctx),
-    dossier: buildDossierInfo(ctx, now),
-    references: buildRefLignes(bijouxRefs),
-    totaux: buildTotaux(bijouxRefs),
-  });
+  console.log("[DOC-GEN] generateQuittanceRachat called for lot:", ctx.lot.id, "refs:", bijouxRefs.length);
+  try {
+    const result = await generateDocument({
+      type: "quittance_rachat",
+      lotId: ctx.lot.id,
+      dossierId: ctx.dossier.id,
+      clientId: ctx.dossier.client.id,
+      client: buildClientInfo(ctx),
+      dossier: buildDossierInfo(ctx, now),
+      references: buildRefLignes(bijouxRefs),
+      totaux: buildTotaux(bijouxRefs),
+    });
+    console.log("[DOC-GEN] generateQuittanceRachat result:", result);
+    return result;
+  } catch (err) {
+    console.error("[DOC-GEN] generateQuittanceRachat error:", err);
+    return null;
+  }
 }
 
 /**

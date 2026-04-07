@@ -40,8 +40,8 @@ import { DocumentsTable } from "@/components/documents/documents-table";
 import { DossierRecapFinancier } from "@/components/dossiers/dossier-recap-financier";
 import { DossierLotsSection } from "@/components/dossiers/dossier-lots-section";
 import { ActionDashboard } from "@/components/actions/action-dashboard";
-import { finaliserDossier } from "@/components/dossiers/dossier-finalization";
-import { generateVenteFactures } from "@/lib/pdf/pdf-actions";
+import { finaliserDossierAction } from "@/lib/actions/finalize-actions";
+import { triggerEmail } from "@/lib/email/trigger";
 import type { DossierWithClient, DossierStatus } from "@/types/dossier";
 import type { Lot, LotReference, LotWithReferences } from "@/types/lot";
 import type { VenteLigne } from "@/types/vente";
@@ -131,12 +131,11 @@ export function DossierDetailPage({
   async function handleSave() {
     setSaving(true);
     const supabase = createClient();
-    const goingEnCours = dossier.status === "brouillon" && status === "en_cours";
 
+    // Save notes
     const { error } = await supabase
       .from("dossiers")
       .update({
-        status,
         notes: notes || null,
         updated_at: new Date().toISOString(),
       })
@@ -144,16 +143,40 @@ export function DossierDetailPage({
 
     if (error) { setSaving(false); toast.error("Erreur lors de l'enregistrement du dossier"); return; }
 
-    // When transitioning to en_cours, pass vente lots to en_cours and generate factures
-    if (goingEnCours) {
-      const venteLots = lots.filter((l) => l.type === "vente" && l.status === "brouillon");
-      for (const vLot of venteLots) {
-        await supabase.from("lots").update({ status: "en_cours" }).eq("id", vLot.id);
-        const result = await generateVenteFactures(vLot.id);
+    // If transitioning to en_cours, trigger full finalization via server action
+    if (dossier.status === "brouillon" && status === "en_cours") {
+      try {
+        const result = await finaliserDossierAction(dossier.id);
         if (!result.success) {
-          toast.error(`Erreur génération factures: ${result.error}`);
+          toast.error(result.error ?? "Erreur lors de la finalisation");
+          setSaving(false);
+          router.refresh();
+          return;
         }
+        // Fire-and-forget email triggers
+        for (const trigger of result.emailTriggers ?? []) {
+          triggerEmail({
+            notification_type: trigger.type,
+            lot_id: trigger.lotId,
+            dossier_id: trigger.dossierId,
+            client_id: trigger.clientId,
+            attachment_paths: trigger.paths,
+          });
+        }
+      } catch (err) {
+        console.error("[DOSSIER] finaliserDossierAction error:", err);
+        toast.error("Erreur inattendue lors de la finalisation");
+        setSaving(false);
+        router.refresh();
+        return;
       }
+    } else if (status !== dossier.status) {
+      // Simple status change (not finalization)
+      const { error: statusErr } = await supabase
+        .from("dossiers")
+        .update({ status })
+        .eq("id", dossier.id);
+      if (statusErr) { setSaving(false); toast.error("Erreur lors du changement de statut"); return; }
     }
 
     setSaving(false);
@@ -227,11 +250,29 @@ export function DossierDetailPage({
 
   async function handleFinaliserDossier() {
     setProcessing(true);
-    const supabase = createClient();
-    const result = await finaliserDossier({ dossier, brouillonLots, supabase });
-    setProcessing(false);
-    if (result.success) {
-      router.refresh();
+    try {
+      const result = await finaliserDossierAction(dossier.id);
+      setProcessing(false);
+      if (result.success) {
+        toast.success("Dossier finalisé");
+        // Fire-and-forget email triggers
+        for (const trigger of result.emailTriggers ?? []) {
+          triggerEmail({
+            notification_type: trigger.type,
+            lot_id: trigger.lotId,
+            dossier_id: trigger.dossierId,
+            client_id: trigger.clientId,
+            attachment_paths: trigger.paths,
+          });
+        }
+        router.refresh();
+      } else {
+        toast.error(result.error ?? "Erreur lors de la finalisation du dossier");
+      }
+    } catch (err) {
+      setProcessing(false);
+      console.error("[DOSSIER] handleFinaliserDossier error:", err);
+      toast.error("Erreur inattendue lors de la finalisation");
     }
   }
 
@@ -379,8 +420,8 @@ export function DossierDetailPage({
             <DocumentsTable documents={documents ?? []} />
           </div>
 
-          {/* Récapitulatif financier */}
-          <DossierRecapFinancier
+          {/* Récapitulatif financier — masqué temporairement */}
+          {/* <DossierRecapFinancier
             lots={lots}
             lotReferences={lotReferences}
             venteLignes={venteLignes}
@@ -388,7 +429,7 @@ export function DossierDetailPage({
             bonsCommande={bonsCommande}
             documents={documents ?? []}
             stockCostMap={stockCostMap}
-          />
+          /> */}
 
           {/* Notes */}
           <Card className="md:col-span-2">

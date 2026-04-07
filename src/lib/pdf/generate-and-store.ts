@@ -94,16 +94,22 @@ export interface GenerateDocumentParams {
   lotReferenceIds?: string[];
 }
 
-export async function generateAndStoreDocument(params: GenerateDocumentParams): Promise<string | null> {
+export type DocResult = { path: string; error?: never } | { path: null; error: string };
+
+export async function generateAndStoreDocument(params: GenerateDocumentParams): Promise<string | null>;
+export async function generateAndStoreDocument(params: GenerateDocumentParams, detailed: true): Promise<DocResult>;
+export async function generateAndStoreDocument(params: GenerateDocumentParams, detailed?: boolean): Promise<string | null | DocResult> {
   const { type, lotId, dossierId, clientId, client, dossier, references, totaux } = params;
 
-  // Refresh company info from settings before generating PDF
-  await refreshSociete();
+  const fail = (msg: string) => {
+    console.error(`[DOC-STORE] FAIL ${type}:`, msg);
+    return detailed ? { path: null, error: msg } as DocResult : null;
+  };
 
-  // Generate next sequential numero
+  try {
+  await refreshSociete();
   const numero = await getNextNumero(type);
 
-  // Generate PDF blob
   let blob: Blob;
   const data = { numero, client, dossier, references, totaux };
 
@@ -113,25 +119,19 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     blob = await generateContratRachat(data);
   } else if (type === "contrat_depot_vente") {
     blob = await generateContratDepotVente({
-      numero,
-      client,
-      dossier,
+      numero, client, dossier,
       references: params.depotVenteReferences!,
       numeroLot: params.numeroLot!,
     });
   } else if (type === "confie_achat") {
     blob = await generateConfieAchat({
-      numero,
-      client,
-      dossier,
+      numero, client, dossier,
       reference: params.confieReference!,
       totaux,
     });
   } else if (type === "quittance_depot_vente") {
     blob = await generateQuittanceDepotVente({
-      numero,
-      client,
-      dossier,
+      numero, client, dossier,
       lignes: params.quittanceDepotVenteLignes!,
       totalVentes: params.totalVentes!,
       totalCommission: params.totalCommission!,
@@ -140,38 +140,25 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     });
   } else if (type === "facture_vente") {
     blob = await generateFactureVente({
-      numero,
-      client,
-      dossier,
+      numero, client, dossier,
       lignes: params.factureVenteLignes!,
-      totalHT: params.totalHT!,
-      tva: params.tva!,
-      totalTTC: params.totalTTC!,
+      totalHT: params.totalHT!, tva: params.tva!, totalTTC: params.totalTTC!,
       modeReglement: params.modeReglement!,
     });
   } else if (type === "facture_acompte") {
     blob = await generateFactureAcompte({
-      numero,
-      client,
-      dossier,
+      numero, client, dossier,
       lignes: params.factureVenteLignes!,
-      totalHT: params.totalHT!,
-      tva: params.tva!,
-      totalTTC: params.totalTTC!,
+      totalHT: params.totalHT!, tva: params.tva!, totalTTC: params.totalTTC!,
       acomptePourcentage: params.acomptePourcentage!,
-      montantAcompte: params.montantAcompte!,
-      montantSolde: params.montantSolde!,
+      montantAcompte: params.montantAcompte!, montantSolde: params.montantSolde!,
       dateLimiteSolde: params.dateLimiteSolde!,
     });
   } else if (type === "facture_solde") {
     blob = await generateFactureSolde({
-      numero,
-      client,
-      dossier,
+      numero, client, dossier,
       lignes: params.factureVenteLignes!,
-      totalHT: params.totalHT!,
-      tva: params.tva!,
-      totalTTC: params.totalTTC!,
+      totalHT: params.totalHT!, tva: params.tva!, totalTTC: params.totalTTC!,
       montantAcompte: params.montantAcompte!,
       numeroAcompte: params.numeroAcompte ?? "",
       montantSolde: params.montantSolde!,
@@ -179,8 +166,7 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     });
   } else if (type === "bon_commande") {
     blob = await generateBonCommande({
-      numero,
-      dossier,
+      numero, dossier,
       fonderie: params.fonderie!,
       lignes: params.bonCommandeLignes!,
       totalHT: params.bonCommandeTotalHT!,
@@ -202,33 +188,23 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     });
 
   if (uploadError) {
-    console.error("Upload error:", uploadError);
-    return null;
+    return fail(`Upload: ${uploadError.message}`);
   }
 
-  // Determine initial document status based on type
   const emittedTypes = ["quittance_rachat", "quittance_depot_vente", "bon_commande"];
   const initialStatus = emittedTypes.includes(type) ? "emis" : "en_attente";
 
-  // Create document record in DB
   const { error: dbError } = await supabase.from("documents").insert({
-    type,
-    numero,
-    lot_id: lotId,
-    dossier_id: dossierId,
-    client_id: clientId,
-    storage_path: storagePath,
-    status: initialStatus,
+    type, numero, lot_id: lotId, dossier_id: dossierId, client_id: clientId,
+    storage_path: storagePath, status: initialStatus,
     reference_numero: params.referenceNumero ?? null,
   });
 
   if (dbError) {
-    console.error("DB error:", dbError);
     await supabase.storage.from("documents").remove([storagePath]);
-    return null;
+    return fail(`DB insert: ${dbError.message}`);
   }
 
-  // Link document to lot_references if IDs provided
   if (params.lotReferenceIds && params.lotReferenceIds.length > 0) {
     const { data: docRecord } = await supabase
       .from("documents")
@@ -245,7 +221,12 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams): 
     }
   }
 
-  return storagePath;
+  console.log("[DOC-STORE] OK:", storagePath);
+  return detailed ? { path: storagePath } as DocResult : storagePath;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return fail(`Exception: ${msg}`);
+  }
 }
 
 /**

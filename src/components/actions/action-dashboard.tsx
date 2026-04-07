@@ -343,7 +343,7 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
             <span className="text-sm truncate">{row.label}</span>
           </div>
           {row.lotHref ? (
-            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><ArrowCounterClockwise size={14} weight="duotone" />Se rétracte</Button>
+            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><XCircle size={14} weight="duotone" />Se rétracte</Button>
           ) : (
             <ActionButton action={{ ...row.flat.action, variant: "outline" }} ctx={row.flat.ctx} />
           )}
@@ -357,7 +357,7 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
             <ActionIcon type="depot_vente" />
             <span className="text-sm truncate">{row.label}</span>
           </div>
-          <Button size="sm" variant="outline" onClick={() => onRestituer(row.lot)}>Restituer un article</Button>
+          <Button size="sm" variant="outline" onClick={() => onRestituer(row.lot)}><ArrowUUpLeft size={14} weight="duotone" />Restituer un article</Button>
         </div>
       );
 
@@ -380,6 +380,7 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
               }
             }}
           >
+            <Money size={14} weight="duotone" />
             Enregistrer
           </Button>
         </div>
@@ -395,9 +396,9 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
             <span className="text-sm truncate">{row.label}</span>
           </div>
           {isCommander ? (
-            <Button size="sm" variant="outline" onClick={() => onCommande(row.flat.lot.id)}>Commander</Button>
+            <Button size="sm" variant="outline" onClick={() => onCommande(row.flat.lot.id)}><ShoppingCart size={14} weight="duotone" />Commander</Button>
           ) : row.lotHref ? (
-            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}>Voir</Button>
+            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><Package size={14} weight="duotone" />Voir</Button>
           ) : (
             <ActionButton action={{ ...row.flat.action, label: btnLabel, variant: "outline" }} ctx={row.flat.ctx} />
           )}
