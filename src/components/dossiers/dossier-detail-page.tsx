@@ -164,6 +164,10 @@ export function DossierDetailPage({
   }
 
   async function handleCreateLot(type: "rachat" | "vente" | "depot_vente") {
+    if (dossier.status !== "brouillon") {
+      toast.error("Impossible d'ajouter un lot à un dossier validé. Veuillez créer un nouveau dossier.");
+      return;
+    }
     setCreatingLot(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -335,7 +339,14 @@ export function DossierDetailPage({
           </Card>
 
           {/* Action Dashboard */}
-          <ActionDashboard dossier={dossier} lots={lotsWithRefs} />
+          <ActionDashboard
+            dossier={dossier}
+            lots={lotsWithRefs}
+            documents={documents ?? []}
+            reglements={reglements}
+            venteLignes={venteLignes}
+            bonsCommande={bonsCommande}
+          />
 
           {/* Lots */}
           <DossierLotsSection

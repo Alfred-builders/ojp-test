@@ -74,7 +74,7 @@ export function DossierLotsSection({
           <Package size={20} weight="duotone" />
           Lots ({lots.length})
         </CardTitle>
-        {dossierStatus !== "finalise" && (
+        {dossierStatus === "brouillon" && (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -159,14 +159,18 @@ export function DossierLotsSection({
                         <Eye size={14} weight="duotone" />
                         Voir le lot
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => setDeletingLotId(lot.id)}
-                      >
-                        <Trash size={14} weight="duotone" />
-                        Supprimer
-                      </DropdownMenuItem>
+                      {dossierStatus === "brouillon" && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setDeletingLotId(lot.id)}
+                          >
+                            <Trash size={14} weight="duotone" />
+                            Supprimer
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
