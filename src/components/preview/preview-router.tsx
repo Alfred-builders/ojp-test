@@ -8,6 +8,7 @@ export type EntityType =
   | "dossier"
   | "lot"
   | "vente"
+  | "reference"
   | "fonderie"
   | "stock";
 
@@ -16,6 +17,7 @@ export const entityLabels: Record<EntityType, string> = {
   dossier: "Dossier",
   lot: "Lot",
   vente: "Vente",
+  reference: "Référence",
   fonderie: "Fonderie",
   stock: "Stock",
 };
@@ -25,6 +27,7 @@ export const entityRoutes: Record<EntityType, string> = {
   dossier: "dossiers",
   lot: "lots",
   vente: "ventes",
+  reference: "references",
   fonderie: "fonderies",
   stock: "stock",
 };
@@ -34,6 +37,9 @@ const DossierPreview = lazy(
   () => import("@/components/preview/dossier-preview")
 );
 const LotPreview = lazy(() => import("@/components/preview/lot-preview"));
+const ReferencePreview = lazy(
+  () => import("@/components/preview/reference-preview")
+);
 
 interface PreviewRouterProps {
   type: EntityType;
@@ -46,6 +52,7 @@ export function PreviewRouter({ type, id }: PreviewRouterProps) {
       {type === "client" && <ClientPreview id={id} />}
       {type === "dossier" && <DossierPreview id={id} />}
       {type === "lot" && <LotPreview id={id} />}
+      {type === "reference" && <ReferencePreview id={id} />}
       {type === "vente" && (
         <p className="text-sm text-muted-foreground py-8 text-center">
           Aperçu vente — bientôt disponible

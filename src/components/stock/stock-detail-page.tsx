@@ -193,11 +193,9 @@ export function StockDetailPage({
       <Header
         title={bijou.nom}
         backAction={
-          <Link href="/stock">
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         {canEdit && (

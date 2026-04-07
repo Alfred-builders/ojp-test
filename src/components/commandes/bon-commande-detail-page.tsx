@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -116,11 +115,9 @@ export function BonCommandeDetailPage({ bdc, reglements }: BonCommandeDetailPage
       <Header
         title={bdc.numero}
         backAction={
-          <Link href="/commandes">
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         <Badge variant="secondary" className={statutConfig.className}>
@@ -128,7 +125,7 @@ export function BonCommandeDetailPage({ bdc, reglements }: BonCommandeDetailPage
         </Badge>
       </Header>
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Info */}
           <Card>

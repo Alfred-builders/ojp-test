@@ -183,11 +183,9 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
       <Header
         title={lot.numero}
         backAction={
-          <Link href={`/dossiers/${lot.dossier.id}`}>
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         <div className="flex items-center gap-2">
@@ -212,7 +210,7 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
         </div>
       </Header>
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Acompte 48h deadline alert */}
         {lot.acompte_paye && !lot.solde_paye && lot.date_limite_solde && status === "en_cours" && (() => {
           const deadline = new Date(lot.date_limite_solde);

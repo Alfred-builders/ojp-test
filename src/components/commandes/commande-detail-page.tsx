@@ -251,17 +251,15 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
       <Header
         title={lot.numero}
         backAction={
-          <Link href="/commandes">
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         <VenteStatusBadge status={lot.status as VenteStatus} />
       </Header>
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Stepper */}
         {totalOrInvest > 0 && (
           <CommandeStepper lot={lot} lignes={orInvestLignes} allFulfilled={allFulfilled} />

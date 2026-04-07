@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   ArrowLeft,
   Factory,
@@ -72,11 +71,9 @@ export default function NewFonderiePage() {
       <Header
         title="Nouvelle fonderie"
         backAction={
-          <Link href="/fonderies">
-            <Button variant="ghost" size="icon-sm">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         <Button size="sm" disabled={saving} onClick={handleCreate}>

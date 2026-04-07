@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowSquareOut,
@@ -136,6 +137,7 @@ export function ReferenceDetailPage({
   sale,
   orInvestissement,
 }: ReferenceDetailPageProps) {
+  const router = useRouter();
   const statusConfig = REF_STATUS_CONFIG[reference.status];
   const isBijoux = reference.categorie === "bijoux";
   const totalPrice = reference.prix_achat * reference.quantite;
@@ -147,11 +149,9 @@ export function ReferenceDetailPage({
       <Header
         title={reference.designation}
         backAction={
-          <Link href={`/lots/${parentLot.id}`}>
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         <Badge variant="secondary" className={statusConfig.className}>

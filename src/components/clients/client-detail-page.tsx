@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
-import Link from "next/link";
 import { PreviewLink } from "@/components/preview/preview-link";
 import { usePreviewDrawer } from "@/hooks/use-preview-drawer";
 import { useRouter } from "next/navigation";
@@ -214,11 +213,9 @@ export function ClientDetailPage({
       <Header
         title={displayName}
         backAction={
-          <Link href="/clients">
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         {editing ? (
@@ -233,7 +230,7 @@ export function ClientDetailPage({
           </Button>
         )}
       </Header>
-      <div className="flex-1 p-6">
+      <div className="flex-1 overflow-y-auto p-6">
         <div className="grid gap-6 md:grid-cols-3">
           {/* Informations personnelles */}
           <Card>

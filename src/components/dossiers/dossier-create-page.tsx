@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -114,11 +113,9 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
       <Header
         title="Nouveau dossier"
         backAction={
-          <Link href="/dossiers">
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         <Button size="sm" disabled={saving} onClick={handleCreate}>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   ArrowLeft,
   Factory,
@@ -127,11 +126,9 @@ export function FonderieDetailPage({ fonderie, bonsCommande = [] }: { fonderie: 
       <Header
         title={fonderie.nom}
         backAction={
-          <Link href="/fonderies">
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         {editing ? (
@@ -147,7 +144,7 @@ export function FonderieDetailPage({ fonderie, bonsCommande = [] }: { fonderie: 
         )}
       </Header>
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Informations */}
           <Card>

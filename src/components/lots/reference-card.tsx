@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Diamond, Coins, Lightning, FileText, DotsThree, PencilSimple, Trash, WarningCircle, ArrowUUpLeft, CheckCircle, XCircle, Timer, Stamp, ArrowCounterClockwise, ArrowSquareOut } from "@phosphor-icons/react";
+import { Diamond, Coins, Lightning, FileText, DotsThree, PencilSimple, Trash, WarningCircle, ArrowUUpLeft, CheckCircle, XCircle, Timer, Stamp, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { usePreviewDrawer } from "@/hooks/use-preview-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,7 @@ interface ReferenceCardProps {
 }
 
 export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onValiderRachat, onRetracter, onAccepterDevis, onRefuserDevis, canEdit, canRestituer, hideTypeRachat }: ReferenceCardProps) {
+  const { openPreview } = usePreviewDrawer();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isBijoux = reference.categorie === "bijoux";
   const statusConfig = REF_STATUS_CONFIG[reference.status];
@@ -58,14 +59,16 @@ export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onVali
       {/* Info principale */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <Link
-            href={`/references/${reference.id}`}
-            className="inline-flex items-center gap-1 font-medium text-sm truncate text-primary hover:underline"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            className="font-medium text-sm truncate text-foreground hover:underline cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              openPreview("reference", reference.id);
+            }}
           >
             {reference.designation}
-            <ArrowSquareOut size={12} weight="regular" className="shrink-0" />
-          </Link>
+          </button>
           {!hideTypeRachat && (
             <Badge variant="outline" className={reference.type_rachat === "devis" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800" : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"}>
               {reference.type_rachat === "devis" ? (

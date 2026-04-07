@@ -39,9 +39,10 @@ import { DOSSIER_STATUS_OPTIONS } from "@/lib/validations/dossier";
 import { DocumentsTable } from "@/components/documents/documents-table";
 import { DossierRecapFinancier } from "@/components/dossiers/dossier-recap-financier";
 import { DossierLotsSection } from "@/components/dossiers/dossier-lots-section";
+import { ActionDashboard } from "@/components/actions/action-dashboard";
 import { finaliserDossier } from "@/components/dossiers/dossier-finalization";
 import type { DossierWithClient, DossierStatus } from "@/types/dossier";
-import type { Lot, LotReference } from "@/types/lot";
+import type { Lot, LotReference, LotWithReferences } from "@/types/lot";
 import type { VenteLigne } from "@/types/vente";
 import type { Parametres } from "@/types/parametres";
 import { formatDate } from "@/lib/format";
@@ -119,6 +120,12 @@ export function DossierDetailPage({
   // Lots that can be finalized (brouillon)
   const brouillonLots = lots.filter((l) => l.status === "brouillon");
   const canFinalize = brouillonLots.length > 0;
+
+  // Build LotWithReferences for ActionDashboard
+  const lotsWithRefs: LotWithReferences[] = lots.map((lot) => ({
+    ...lot,
+    references: lotReferences.filter((r) => r.lot_id === lot.id),
+  }));
 
   async function handleSave() {
     setSaving(true);
@@ -232,11 +239,9 @@ export function DossierDetailPage({
           </span>
         }
         backAction={
-          <Link href="/dossiers">
-            <Button variant="ghost" size="icon-sm" aria-label="Retour">
-              <ArrowLeft size={16} weight="regular" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+            <ArrowLeft size={16} weight="regular" />
+          </Button>
         }
       >
         <div className="flex items-center gap-2">
@@ -280,7 +285,7 @@ export function DossierDetailPage({
           )}
         </div>
       </Header>
-      <div className="flex-1 p-6">
+      <div className="flex-1 overflow-y-auto p-6">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Informations du dossier */}
           <Card>
@@ -328,6 +333,9 @@ export function DossierDetailPage({
               <DetailRow label="Ville" value={dossier.client.city ?? "—"} />
             </CardContent>
           </Card>
+
+          {/* Action Dashboard */}
+          <ActionDashboard dossier={dossier} lots={lotsWithRefs} />
 
           {/* Lots */}
           <DossierLotsSection
