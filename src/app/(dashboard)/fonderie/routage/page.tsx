@@ -6,6 +6,8 @@ import type { LotWithDossier } from "@/types/lot";
 import type { CommandeLigneFlat } from "@/types/commande";
 import type { Fonderie } from "@/types/fonderie";
 
+export const dynamic = "force-dynamic";
+
 export default async function RoutagePage() {
   const supabase = await createClient();
 
