@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sensitiveApiLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function DELETE(
@@ -39,7 +39,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const { data: targetProfile } = await supabaseAdmin
+    const { data: targetProfile } = await getSupabaseAdmin()
       .from("profiles")
       .select("role")
       .eq("id", id)
@@ -60,7 +60,7 @@ export async function DELETE(
     }
 
     // Soft delete : marquer comme "deleted" au lieu de supprimer
-    const { error: profileError } = await supabaseAdmin
+    const { error: profileError } = await getSupabaseAdmin()
       .from("profiles")
       .update({ status: "deleted" })
       .eq("id", id);
@@ -70,7 +70,7 @@ export async function DELETE(
     }
 
     // Bannir de Supabase Auth pour empêcher la connexion
-    await supabaseAdmin.auth.admin.updateUserById(id, {
+    await getSupabaseAdmin().auth.admin.updateUserById(id, {
       ban_duration: "876000h",
     });
 

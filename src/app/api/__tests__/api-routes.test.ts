@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
-  supabaseAdmin: {
+  getSupabaseAdmin: vi.fn().mockReturnValue({
     auth: {
       admin: {
         inviteUserByEmail: vi.fn().mockResolvedValue({ data: { user: { id: "new-1" } }, error: null }),
@@ -60,7 +60,7 @@ vi.mock("@/lib/supabase/admin", () => ({
         eq: vi.fn().mockResolvedValue({ error: null }),
       }),
     }),
-  },
+  }),
 }));
 
 vi.mock("@/lib/email/send-notification", () => ({

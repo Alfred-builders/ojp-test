@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sensitiveApiLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
   try {
     if (mode === "invite") {
-      const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      const { data, error } = await getSupabaseAdmin().auth.admin.generateLink({
         type: "invite",
         email,
         options: {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
         email,
         password,
         email_confirm: true,

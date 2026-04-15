@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sensitiveApiLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import type { UserStatus, UserRole } from "@/types/auth";
 
@@ -55,7 +55,7 @@ export async function PATCH(
       }
 
       // Only super_admin can change roles of proprietaire
-      const { data: targetProfile } = await supabaseAdmin
+      const { data: targetProfile } = await getSupabaseAdmin()
         .from("profiles")
         .select("role")
         .eq("id", id)
@@ -75,7 +75,7 @@ export async function PATCH(
         );
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await getSupabaseAdmin()
         .from("profiles")
         .update({ role: newRole })
         .eq("id", id);
@@ -93,7 +93,7 @@ export async function PATCH(
         return NextResponse.json({ error: "Statut invalide" }, { status: 400 });
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await getSupabaseAdmin()
         .from("profiles")
         .update({ status: newStatus })
         .eq("id", id);
@@ -103,11 +103,11 @@ export async function PATCH(
       }
 
       if (newStatus === "inactive") {
-        await supabaseAdmin.auth.admin.updateUserById(id, {
+        await getSupabaseAdmin().auth.admin.updateUserById(id, {
           ban_duration: "876000h",
         });
       } else {
-        await supabaseAdmin.auth.admin.updateUserById(id, {
+        await getSupabaseAdmin().auth.admin.updateUserById(id, {
           ban_duration: "none",
         });
       }

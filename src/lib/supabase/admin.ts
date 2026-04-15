@@ -16,9 +16,3 @@ export function getSupabaseAdmin() {
   return _supabaseAdmin;
 }
 
-/** @deprecated Use getSupabaseAdmin() instead */
-export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
-  get(_, prop) {
-    return (getSupabaseAdmin() as any)[prop];
-  },
-});

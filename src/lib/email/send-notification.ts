@@ -2,7 +2,7 @@ import { render } from "@react-email/components";
 import { getResend } from "./resend";
 import { replaceVariables, buildVariablesMap, TEST_VARIABLES } from "./variables";
 import { EmailWrapper } from "./wrapper";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { EmailNotificationType, EmailTemplate } from "@/types/email";
 import type { CompanySettings } from "@/types/settings";
 import React from "react";
@@ -38,7 +38,7 @@ export async function sendNotification(
 
   try {
     // 1. Fetch template
-    const { data: template, error: tmplError } = await supabaseAdmin
+    const { data: template, error: tmplError } = await getSupabaseAdmin()
       .from("email_templates")
       .select("*")
       .eq("notification_type", notification_type)
@@ -61,21 +61,21 @@ export async function sendNotification(
       // Fetch entities from DB
       const [clientRes, dossierRes, lotRes, docsRes] = await Promise.all([
         client_id
-          ? supabaseAdmin
+          ? getSupabaseAdmin()
               .from("clients")
               .select("civility, first_name, last_name, email")
               .eq("id", client_id)
               .single()
           : Promise.resolve({ data: null }),
         dossier_id
-          ? supabaseAdmin
+          ? getSupabaseAdmin()
               .from("dossiers")
               .select("numero")
               .eq("id", dossier_id)
               .single()
           : Promise.resolve({ data: null }),
         lot_id
-          ? supabaseAdmin
+          ? getSupabaseAdmin()
               .from("lots")
               .select(
                 "numero, total_prix_achat, total_prix_revente, acompte_montant, date_limite_solde, mode_reglement"
@@ -84,7 +84,7 @@ export async function sendNotification(
               .single()
           : Promise.resolve({ data: null }),
         lot_id
-          ? supabaseAdmin
+          ? getSupabaseAdmin()
               .from("documents")
               .select("type, numero")
               .eq("lot_id", lot_id)
@@ -114,7 +114,7 @@ export async function sendNotification(
     // 5. Download PDF attachments
     const attachments: Array<{ filename: string; content: Buffer }> = [];
     for (const path of resolvedPaths) {
-      const { data: fileData, error: dlError } = await supabaseAdmin.storage
+      const { data: fileData, error: dlError } = await getSupabaseAdmin().storage
         .from("documents")
         .download(path);
 
@@ -148,7 +148,7 @@ export async function sendNotification(
     }
 
     // 8. Send via Resend — use company settings for sender name/email
-    const { data: companyRow } = await supabaseAdmin
+    const { data: companyRow } = await getSupabaseAdmin()
       .from("settings")
       .select("value")
       .eq("key", "company")
@@ -165,7 +165,7 @@ export async function sendNotification(
     });
 
     // 9. Log
-    await supabaseAdmin.from("email_logs").insert({
+    await getSupabaseAdmin().from("email_logs").insert({
       notification_type,
       recipient_email: recipientEmail,
       subject,
@@ -187,7 +187,7 @@ export async function sendNotification(
 
     // Log failure
     try {
-      await supabaseAdmin.from("email_logs").insert({
+      await getSupabaseAdmin().from("email_logs").insert({
         notification_type,
         recipient_email: "unknown",
         subject: "Error",
@@ -225,7 +225,7 @@ async function getAutoAttachmentPaths(
   const docTypes = NOTIFICATION_DOCUMENT_TYPES[notificationType];
   if (!docTypes || docTypes.length === 0) return [];
 
-  const { data: docs } = await supabaseAdmin
+  const { data: docs } = await getSupabaseAdmin()
     .from("documents")
     .select("storage_path, type")
     .eq("lot_id", lotId)

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sensitiveApiLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(
@@ -32,7 +32,7 @@ export async function POST(
   }
 
   // Get the target user's email
-  const { data: targetProfile } = await supabaseAdmin
+  const { data: targetProfile } = await getSupabaseAdmin()
     .from("profiles")
     .select("email, status")
     .eq("id", id)
@@ -47,7 +47,7 @@ export async function POST(
   }
 
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    const { data, error } = await getSupabaseAdmin().auth.admin.generateLink({
       type: "invite",
       email: targetProfile.email,
     });
