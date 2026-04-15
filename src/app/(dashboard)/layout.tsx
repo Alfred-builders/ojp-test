@@ -17,6 +17,7 @@ import { PreviewDrawerProvider } from "@/providers/preview-drawer-provider";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import type { UserRole } from "@/types/auth";
 
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({
   children,
