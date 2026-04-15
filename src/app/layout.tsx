@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentationProvider } from "@/components/agentation-provider";
@@ -36,6 +37,11 @@ export default function RootLayout({
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
         <AgentationProvider />
+        <Script
+          src="https://alfrhelp-web-staging.up.railway.app/widget.js"
+          data-site-id="6270b1bc-b08d-4c63-aabc-e02d97f0c252"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
