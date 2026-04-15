@@ -56,10 +56,10 @@ export function DocumentationPage() {
   const contentStyles = "text-sm leading-[2] [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_h4]:mt-6 [&_h4]:text-base [&_li]:leading-[2] [&_li]:my-0.5 [&_ol]:leading-[2] [&_p]:text-muted-foreground [&_p]:my-3 [&_ul]:leading-[2] [&_strong]:text-foreground [&_p>button]:align-middle [&_p>button]:mx-1.5 [&_p>[data-slot=badge]]:align-middle [&_p>[data-slot=badge]]:mx-1";
 
   return (
-    <div className="flex flex-1 min-h-0">
+    <div className="flex flex-1 min-h-0 overflow-hidden">
       {/* Navigation latérale — masquée sur mobile */}
       <div className="hidden md:flex md:flex-col w-56 shrink-0 border-r overflow-hidden">
-      <nav className="space-y-4 overflow-y-auto pr-4 pt-0 h-full max-h-full">
+      <nav className="space-y-4 overflow-y-auto pr-4 pl-6 pt-4 h-full">
         {categories.map((category) => (
           <div key={category.label} className="space-y-1">
             <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

@@ -36,11 +36,14 @@ interface ReferenceCardProps {
   canEdit?: boolean;
   canRestituer?: boolean;
   hideTypeRachat?: boolean;
+  isDepotVente?: boolean;
 }
 
-export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onValiderRachat, onRetracter, onAccepterDevis, onRefuserDevis, canEdit, canRestituer, hideTypeRachat }: ReferenceCardProps) {
+export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onValiderRachat, onRetracter, onAccepterDevis, onRefuserDevis, canEdit, canRestituer, hideTypeRachat, isDepotVente }: ReferenceCardProps) {
   const { openPreview } = usePreviewDrawer();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmRefuser, setConfirmRefuser] = useState(false);
+  const [confirmRetracter, setConfirmRetracter] = useState(false);
   const isBijoux = reference.categorie === "bijoux";
   const statusConfig = REF_STATUS_CONFIG[reference.status];
   const totalPrice = reference.prix_achat * reference.quantite;
@@ -82,7 +85,11 @@ export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onVali
         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
           {reference.metal && <span>{reference.metal}</span>}
           {reference.qualite && <span>· {reference.qualite}</span>}
-          {reference.poids && <span>· {reference.poids}g</span>}
+          {reference.poids_brut != null && reference.poids_net != null && reference.poids_brut !== reference.poids_net ? (
+            <span>· {reference.poids_brut}g (net: {reference.poids_net}g)</span>
+          ) : (
+            reference.poids_net != null ? <span>· {reference.poids_net}g</span> : reference.poids != null && <span>· {reference.poids}g</span>
+          )}
           <span>· ×{reference.quantite}</span>
           <span>· {formatCurrency(reference.prix_achat)}/u</span>
         </div>
@@ -91,6 +98,7 @@ export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onVali
       {/* Prix total */}
       <div className="text-right shrink-0">
         <p className="text-lg font-bold">{formatCurrency(totalPrice)}</p>
+        {isDepotVente && <p className="text-xs text-muted-foreground">net déposant</p>}
       </div>
 
       {/* Badges */}
@@ -113,9 +121,9 @@ export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onVali
                 <Stamp size={14} weight="duotone" />
                 Valider
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => onRetracter(reference.id)}>
+              <Button size="sm" variant="destructive" onClick={() => setConfirmRetracter(true)}>
                 <ArrowCounterClockwise size={14} weight="duotone" />
-                Rétracté
+                Se rétracte
               </Button>
             </div>
           ) : null;
@@ -130,16 +138,54 @@ export function ReferenceCard({ reference, onDelete, onEdit, onRestituer, onVali
             <div className="flex items-center gap-1">
               <Button size="sm" onClick={() => onAccepterDevis(reference.id)}>
                 <CheckCircle size={14} weight="duotone" />
-                Accepté
+                Accepter
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => onRefuserDevis(reference.id)}>
+              <Button size="sm" variant="destructive" onClick={() => setConfirmRefuser(true)}>
                 <XCircle size={14} weight="duotone" />
-                Refusé
+                Refuser
               </Button>
             </div>
           ) : null;
         })()
       )}
+
+      {/* Confirmation dialog: Refuser */}
+      <Dialog open={confirmRefuser} onOpenChange={setConfirmRefuser}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Refuser le devis</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir refuser le devis pour &quot;{reference.designation}&quot; ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRefuser(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={() => { setConfirmRefuser(false); onRefuserDevis?.(reference.id); }}>
+              <XCircle size={14} weight="duotone" />
+              Refuser
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation dialog: Se rétracter */}
+      <Dialog open={confirmRetracter} onOpenChange={setConfirmRetracter}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rétractation</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir valider la rétractation pour &quot;{reference.designation}&quot; ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRetracter(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={() => { setConfirmRetracter(false); onRetracter?.(reference.id); }}>
+              <ArrowCounterClockwise size={14} weight="duotone" />
+              Se rétracte
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Restitution button for depot-vente */}
       {canRestituer && onRestituer && reference.status === "en_depot_vente" && (

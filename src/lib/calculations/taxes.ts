@@ -85,6 +85,28 @@ export function calculerTPV(
 }
 
 /**
+ * Calcul de la TFOP (Taxe Forfaitaire sur les Objets Précieux).
+ * Taux fixe de 6% + 0.5% CRDS = 6.5% sur le montant total de la cession.
+ * Exonéré si le montant de cession est ≤ 5 000 €.
+ */
+export function calculerTFOP(prixCession: number): number {
+  const prix = safeNum(prixCession);
+  if (prix <= 5000) return 0;
+  return Math.round(prix * 0.065 * 100) / 100;
+}
+
+/**
+ * Calcul de la TVA sur la marge (régime des biens d'occasion, art. 297 A CGI).
+ * Taux de 20% appliqué sur la marge (prix de vente - prix d'achat).
+ * Si la marge est négative ou nulle, pas de TVA.
+ */
+export function calculerTVAMarge(prixVente: number, prixAchat: number): number {
+  const marge = safeNum(prixVente) - safeNum(prixAchat);
+  if (marge <= 0) return 0;
+  return Math.round(marge * 0.2 * 100) / 100;
+}
+
+/**
  * Compare TPV et TMP et retourne le régime le plus avantageux (le moins cher).
  */
 export function regimeFiscalOptimal(
@@ -95,4 +117,18 @@ export function regimeFiscalOptimal(
     return { regime: "TPV", montant: tpvMontant };
   }
   return { regime: "TMP", montant: tmpMontant };
+}
+
+/**
+ * Compare TPV et TFOP et retourne le régime le plus avantageux (le moins cher).
+ * Utilisé pour les bijoux (TFOP au lieu de TMP).
+ */
+export function regimeFiscalOptimalBijoux(
+  tpvMontant: number | null,
+  tfopMontant: number
+): { regime: "TPV" | "TFOP"; montant: number } {
+  if (tpvMontant !== null && tpvMontant < tfopMontant) {
+    return { regime: "TPV", montant: tpvMontant };
+  }
+  return { regime: "TFOP", montant: tfopMontant };
 }

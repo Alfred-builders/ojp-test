@@ -62,7 +62,7 @@ export function RetourReparationDialog({
         .from("bijoux_stock")
         .update({ statut: "en_stock", updated_at: new Date().toISOString() })
         .eq("id", bijouId),
-      "Erreur lors de la remise en stock du bijou",
+      "Erreur lors de la remise en stock du bijoux",
       "Retour de réparation enregistré"
     );
     if (stockError) { setSaving(false); return; }
@@ -83,7 +83,7 @@ export function RetourReparationDialog({
             Récupérer de réparation
           </DialogTitle>
           <DialogDescription>
-            Le bijou sera remis en stock après confirmation.
+            Le bijoux sera remis en stock après confirmation.
           </DialogDescription>
         </DialogHeader>
 

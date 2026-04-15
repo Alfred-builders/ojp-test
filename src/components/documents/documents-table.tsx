@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { FileText, DownloadSimple, X, Eye, DotsThree, SpinnerGap } from "@phosphor-icons/react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { FileText, DownloadSimple, X, Eye, DotsThree, SpinnerGap, ArrowUp, ArrowDown, ArrowsDownUp } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,10 @@ const STATUS_CONFIG: Record<DocumentStatus, { label: string; className: string }
     label: "Émis",
     className: "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-800",
   },
+  annule: {
+    label: "Annulé",
+    className: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400",
+  },
 };
 
 function getStorageUrl(path: string): string {
@@ -107,12 +111,48 @@ interface DocumentsTableProps {
   rowActions?: (doc: DocumentRecord) => React.ReactNode;
 }
 
+type SortKey = "numero" | "type" | "status" | "created_at";
+type SortDir = "asc" | "desc";
+
+function SortableDocHead({ children, sortKey, currentSort, currentDir, onSort }: {
+  children: React.ReactNode; sortKey: SortKey; currentSort: SortKey | null; currentDir: SortDir; onSort: (k: SortKey) => void;
+}) {
+  const isActive = currentSort === sortKey;
+  return (
+    <TableHead>
+      <button className="inline-flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => onSort(sortKey)}>
+        {children}
+        {isActive ? (currentDir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowsDownUp size={12} className="opacity-40" />}
+      </button>
+    </TableHead>
+  );
+}
+
 export function DocumentsTable({ documents, title = "Documents", rowActions }: DocumentsTableProps) {
   const [viewingDoc, setViewingDoc] = useState<DocumentRecord | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
+  const sorted = useMemo(() => {
+    if (!sortKey) return documents;
+    return [...documents].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "numero") cmp = a.numero.localeCompare(b.numero);
+      else if (sortKey === "type") cmp = a.type.localeCompare(b.type);
+      else if (sortKey === "status") cmp = a.status.localeCompare(b.status);
+      else if (sortKey === "created_at") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [documents, sortKey, sortDir]);
 
   return (
     <div className="space-y-3">
-      <h3 className="flex items-center gap-2 font-semibold">
+      <h3 className="flex items-center gap-2 font-semibold border-b pb-3">
         <FileText size={20} weight="duotone" />
         {title} ({documents.length})
       </h3>
@@ -125,15 +165,15 @@ export function DocumentsTable({ documents, title = "Documents", rowActions }: D
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-muted">
               <TableRow className="bg-transparent hover:bg-transparent">
-                <TableHead className="pl-4">Numéro</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Date</TableHead>
+                <SortableDocHead sortKey="numero" currentSort={sortKey} currentDir={sortDir} onSort={handleSort}><span className="pl-4">Numéro</span></SortableDocHead>
+                <SortableDocHead sortKey="type" currentSort={sortKey} currentDir={sortDir} onSort={handleSort}>Type</SortableDocHead>
+                <SortableDocHead sortKey="status" currentSort={sortKey} currentDir={sortDir} onSort={handleSort}>Statut</SortableDocHead>
+                <SortableDocHead sortKey="created_at" currentSort={sortKey} currentDir={sortDir} onSort={handleSort}>Date</SortableDocHead>
                 <TableHead className="w-10 pr-4" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.map((doc) => {
+              {sorted.map((doc) => {
                 const config = TYPE_CONFIG[doc.type];
                 return (
                   <TableRow

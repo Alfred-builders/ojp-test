@@ -46,23 +46,35 @@ export async function POST(request: NextRequest) {
 
   try {
     if (mode === "invite") {
-      const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+        type: "invite",
         email,
-        {
+        options: {
           data: {
             first_name: firstName,
             last_name: lastName,
             role: "vendeur",
             status: "pending",
           },
-        }
-      );
+        },
+      });
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
 
-      return NextResponse.json({ user: data.user });
+      // Rewrite Supabase action_link to go through our auth callback
+      const actionLink = data.properties?.action_link ?? "";
+      let inviteLink = actionLink;
+      if (actionLink) {
+        const parsed = new URL(actionLink);
+        const token_hash = parsed.searchParams.get("token") ?? "";
+        const type = parsed.searchParams.get("type") ?? "invite";
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001";
+        inviteLink = `${siteUrl}/auth/callback?token_hash=${token_hash}&type=${type}&next=/reset-password`;
+      }
+
+      return NextResponse.json({ user: data.user, inviteLink });
     } else {
       // Create user with password
       if (!password || password.length < 6) {

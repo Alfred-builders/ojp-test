@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LOT_STATUS_OPTIONS } from "@/lib/validations/lot";
-import type { RachatStatus } from "@/types/lot";
+import type { LotStatus } from "@/types/lot";
 
 interface LotToolbarProps {
   search: string;
   onSearchChange: (v: string) => void;
-  statusFilters: RachatStatus[];
-  onStatusFiltersChange: (v: RachatStatus[]) => void;
+  statusFilters: LotStatus[];
+  onStatusFiltersChange: (v: LotStatus[]) => void;
 }
 
 export function LotToolbar({
@@ -64,10 +64,10 @@ export function LotToolbar({
               className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted cursor-pointer text-sm"
             >
               <Checkbox
-                checked={statusFilters.includes(opt.value as RachatStatus)}
+                checked={statusFilters.includes(opt.value as LotStatus)}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    onStatusFiltersChange([...statusFilters, opt.value as RachatStatus]);
+                    onStatusFiltersChange([...statusFilters, opt.value as LotStatus]);
                   } else {
                     onStatusFiltersChange(statusFilters.filter((s) => s !== opt.value));
                   }

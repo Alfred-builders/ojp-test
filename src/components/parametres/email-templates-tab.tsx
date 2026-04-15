@@ -43,6 +43,7 @@ export function EmailTemplatesTab({ templates: initialTemplates }: EmailTemplate
   const [templates, setTemplates] = useState(initialTemplates);
   const [activeId, setActiveId] = useState(templates[0]?.id ?? "");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isClickScrolling = useRef(false);
 
   const clientTemplates = templates.filter((t) => t.category === "client");
   const interneTemplates = templates.filter((t) => t.category === "interne");
@@ -60,7 +61,32 @@ export function EmailTemplatesTab({ templates: initialTemplates }: EmailTemplate
     },
   ];
 
+  // Intersection observer to track scroll position
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isClickScrolling.current) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.id.replace("tpl-", "");
+            setActiveId(id);
+            break;
+          }
+        }
+      },
+      { root: container, rootMargin: "-10% 0px -80% 0px", threshold: 0 }
+    );
+
+    const targets = container.querySelectorAll("[data-email-section]");
+    targets.forEach((t) => observer.observe(t));
+    return () => observer.disconnect();
+  }, [templates]);
+
   function scrollTo(id: string) {
+    isClickScrolling.current = true;
     setActiveId(id);
     const el = document.getElementById(`tpl-${id}`);
     if (el && scrollRef.current) {
@@ -68,6 +94,7 @@ export function EmailTemplatesTab({ templates: initialTemplates }: EmailTemplate
       const offset = el.offsetTop - container.offsetTop;
       container.scrollTo({ top: offset, behavior: "smooth" });
     }
+    setTimeout(() => { isClickScrolling.current = false; }, 800);
   }
 
   function handleUpdate(updated: EmailTemplate) {
@@ -77,10 +104,10 @@ export function EmailTemplatesTab({ templates: initialTemplates }: EmailTemplate
   }
 
   return (
-    <div className="flex gap-0 h-[calc(100dvh-var(--header-height,64px)-120px)] min-h-[400px]">
+    <div className="flex gap-0 flex-1 min-h-0 overflow-hidden">
       {/* Navigation latérale */}
-      <div className="w-56 shrink-0 border-r">
-        <nav className="space-y-4 overflow-y-auto pr-4 pt-0 h-full">
+      <div className="w-64 shrink-0 border-r overflow-hidden min-h-0">
+        <nav className="space-y-4 overflow-y-auto pr-2 pt-4 pb-4 pl-4 max-h-full">
           {categories.map((cat) => (
             <div key={cat.label} className="space-y-1">
               <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -111,8 +138,8 @@ export function EmailTemplatesTab({ templates: initialTemplates }: EmailTemplate
       </div>
 
       {/* Contenu scrollable */}
-      <div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto scroll-smooth pl-6">
-        <div className="pb-32 space-y-8">
+      <div ref={scrollRef} className="min-w-0 flex-1 min-h-0 overflow-y-auto scroll-smooth pl-6">
+        <div className="pb-32 pt-6 pr-6 space-y-8">
           {templates.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <EnvelopeSimple size={40} weight="duotone" className="text-muted-foreground mb-3" />
@@ -120,7 +147,7 @@ export function EmailTemplatesTab({ templates: initialTemplates }: EmailTemplate
             </div>
           )}
           {templates.map((t) => (
-            <div key={t.id} id={`tpl-${t.id}`} className="mx-auto max-w-2xl scroll-mt-4">
+            <div key={t.id} id={`tpl-${t.id}`} data-email-section className="mx-auto max-w-2xl scroll-mt-4">
               <TemplateEditor
                 template={t}
                 onUpdate={handleUpdate}
@@ -361,9 +388,9 @@ function TemplateEditor({
             Variables disponibles (cliquer pour copier)
           </Label>
           <div className="flex flex-wrap gap-1.5">
-            {template.available_variables.map((v) => (
+            {template.available_variables.map((v, i) => (
               <button
-                key={v.key}
+                key={`${v.key}-${i}`}
                 type="button"
                 title={v.description}
                 onClick={() => copyVariable(v.key)}

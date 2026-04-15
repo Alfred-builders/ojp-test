@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, CaretDown, X, Check } from "@phosphor-icons/react";
+import { MagnifyingGlass, CaretDown, X, Check, Lightning } from "@phosphor-icons/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,8 @@ interface DossierToolbarProps {
   onSearchChange: (value: string) => void;
   statusFilter: DossierStatus | null;
   onStatusFilterChange: (value: DossierStatus | null) => void;
+  actionsFilter: boolean;
+  onActionsFilterChange: (value: boolean) => void;
 }
 
 function FilterPopover({
@@ -85,8 +87,10 @@ export function DossierToolbar({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
+  actionsFilter,
+  onActionsFilterChange,
 }: DossierToolbarProps) {
-  const hasFilters = statusFilter !== null;
+  const hasFilters = statusFilter !== null || actionsFilter;
 
   return (
     <div className="flex items-center gap-2">
@@ -105,12 +109,22 @@ export function DossierToolbar({
         options={statusOptions}
         onChange={(v) => onStatusFilterChange(v as DossierStatus | null)}
       />
+      <Button
+        variant={actionsFilter ? "default" : "outline"}
+        size="sm"
+        className={actionsFilter ? "" : "bg-white dark:bg-card"}
+        onClick={() => onActionsFilterChange(!actionsFilter)}
+      >
+        <Lightning size={14} weight="duotone" />
+        Actions à prendre
+      </Button>
       {hasFilters && (
         <Button
           variant="ghost"
           size="sm"
           onClick={() => {
             onStatusFilterChange(null);
+            onActionsFilterChange(false);
           }}
         >
           <X size={14} weight="duotone" />

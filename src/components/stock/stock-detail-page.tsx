@@ -131,6 +131,7 @@ export function StockDetailPage({
   sale,
   reparations = [],
   activeReparation = null,
+  backHref = "/stock",
 }: {
   bijou: BijouxStock;
   canEdit?: boolean;
@@ -138,6 +139,7 @@ export function StockDetailPage({
   sale?: StockSale | null;
   reparations?: Reparation[];
   activeReparation?: Reparation | null;
+  backHref?: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -176,7 +178,7 @@ export function StockDetailPage({
           updated_at: new Date().toISOString(),
         })
         .eq("id", bijou.id),
-      "Erreur lors de la mise à jour du bijou",
+      "Erreur lors de la mise à jour du bijoux",
       "Stock mis à jour"
     );
     setSaving(false);
@@ -193,7 +195,7 @@ export function StockDetailPage({
       <Header
         title={bijou.nom}
         backAction={
-          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
+          <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.push(backHref)}>
             <ArrowLeft size={16} weight="regular" />
           </Button>
         }
@@ -230,6 +232,25 @@ export function StockDetailPage({
                     Envoyer en fonderie
                   </Button>
                 </>
+              )}
+              {bijou.statut === "a_fondre" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    const supabase = createClient();
+                    const { error } = await mutate(
+                      supabase.from("bijoux_stock").update({ statut: "en_stock" }).eq("id", bijou.id),
+                      "Erreur lors du passage en stock",
+                      "Article remis en stock"
+                    );
+                    if (error) return;
+                    router.refresh();
+                  }}
+                >
+                  <PhPackage size={16} weight="duotone" />
+                  Remettre en stock
+                </Button>
               )}
               {bijou.statut === "en_reparation" && activeReparation && (
                 <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-600/30 hover:bg-emerald-500/10" onClick={() => setShowRetourDialog(true)}>
@@ -331,7 +352,8 @@ export function StockDetailPage({
                 />
                 <DetailRow label="Qualité" value={bijou.qualite ?? "—"} editing={editing} editValue={qualite} onEditChange={setQualite} />
                 <DetailRow label="Titrage" value={bijou.titrage ?? "—"} editing={editing} editValue={titrage} onEditChange={setTitrage} />
-                <DetailRow label="Poids" value={bijou.poids !== null ? `${bijou.poids} g` : "—"} editing={editing} editValue={poids} onEditChange={setPoids} type="number" />
+                <DetailRow label="Poids brut" value={bijou.poids_brut !== null ? `${bijou.poids_brut} g` : bijou.poids !== null ? `${bijou.poids} g` : "—"} editing={editing} editValue={poids} onEditChange={setPoids} type="number" />
+                <DetailRow label="Poids net" value={bijou.poids_net !== null ? `${bijou.poids_net} g` : bijou.poids !== null ? `${bijou.poids} g` : "—"} />
                 <DetailRow label="Quantité" value={bijou.quantite ?? "—"} editing={editing} editValue={quantite} onEditChange={setQuantite} type="number" />
               </CardContent>
             </Card>

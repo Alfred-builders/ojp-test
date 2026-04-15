@@ -90,7 +90,7 @@ export function RestitutionDialog({ open, onOpenChange, lot, dossierClient }: Re
             Restituer des articles — {lot.numero}
           </DialogTitle>
           <DialogDescription>
-            Selectionnez les articles a restituer au client.
+            Sélectionnez les articles à restituer au client.
           </DialogDescription>
         </DialogHeader>
 
@@ -110,12 +110,12 @@ export function RestitutionDialog({ open, onOpenChange, lot, dossierClient }: Re
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     {ref.metal && <span>{ref.metal}</span>}
                     {ref.qualite && <span>· {ref.qualite}</span>}
-                    {ref.poids && <span>· {ref.poids}g</span>}
+                    {(ref.poids_net ?? ref.poids) && <span>· {ref.poids_net ?? ref.poids}g</span>}
                     <span>· x{ref.quantite}</span>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold">{formatCurrency(ref.prix_achat * ref.quantite)}</p>
+                  <p className="text-sm font-bold">{formatCurrency(ref.prix_achat * ref.quantite)} <span className="text-xs font-normal text-muted-foreground">net déposant</span></p>
                 </div>
                 <Button
                   size="sm"
@@ -130,14 +130,14 @@ export function RestitutionDialog({ open, onOpenChange, lot, dossierClient }: Re
             ))
           ) : (
             <p className="text-sm text-muted-foreground text-center py-6">
-              Tous les articles ont ete restitues.
+              Tous les articles ont été restitués.
             </p>
           )}
 
           {/* Articles deja restitues */}
           {alreadyRestituted.length > 0 && (
             <>
-              <p className="text-xs text-muted-foreground pt-2">Deja restitues</p>
+              <p className="text-xs text-muted-foreground pt-2">Déjà restitués</p>
               {alreadyRestituted.map((ref) => (
                 <div
                   key={ref.id}
@@ -151,11 +151,11 @@ export function RestitutionDialog({ open, onOpenChange, lot, dossierClient }: Re
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                       {ref.metal && <span>{ref.metal}</span>}
                       {ref.qualite && <span>· {ref.qualite}</span>}
-                      {ref.poids && <span>· {ref.poids}g</span>}
+                      {(ref.poids_net ?? ref.poids) && <span>· {ref.poids_net ?? ref.poids}g</span>}
                     </div>
                   </div>
                   <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                    Restitue
+                    Restitué
                   </Badge>
                 </div>
               ))}

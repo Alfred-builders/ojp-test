@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { VENTE_STATUS_OPTIONS } from "@/lib/validations/vente";
-import type { VenteStatus } from "@/types/vente";
+import type { LotStatus } from "@/types/lot";
 
 interface VenteToolbarProps {
   search: string;
   onSearchChange: (v: string) => void;
-  statusFilters: VenteStatus[];
-  onStatusFiltersChange: (v: VenteStatus[]) => void;
+  statusFilters: LotStatus[];
+  onStatusFiltersChange: (v: LotStatus[]) => void;
 }
 
 export function VenteToolbar({
@@ -63,10 +63,10 @@ export function VenteToolbar({
               className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted cursor-pointer text-sm"
             >
               <Checkbox
-                checked={statusFilters.includes(opt.value as VenteStatus)}
+                checked={statusFilters.includes(opt.value as LotStatus)}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    onStatusFiltersChange([...statusFilters, opt.value as VenteStatus]);
+                    onStatusFiltersChange([...statusFilters, opt.value as LotStatus]);
                   } else {
                     onStatusFiltersChange(statusFilters.filter((s) => s !== opt.value));
                   }

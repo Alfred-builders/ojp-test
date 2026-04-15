@@ -65,10 +65,8 @@ export async function DashboardLotsServer() {
     } else if (lot.type === "vente" && lot.status === "brouillon") {
       action = "Lot en brouillon — à valider";
     } else if (lot.type === "rachat") {
-      if (lot.status === "en_retractation" || lot.status === "en_cours") {
-        action = "En attente de fin du délai de rétractation";
-      } else if (lot.status === "devis_envoye") {
-        action = "Devis envoyé — en attente de réponse client";
+      if (lot.status === "en_cours") {
+        action = "En cours de traitement";
       } else if (lot.status === "brouillon") {
         action = "Lot en brouillon — à valider";
       }

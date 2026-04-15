@@ -80,24 +80,22 @@ const VENTE_OR_INVEST_STEPS: StepDef[] = [
 // ── Compute current step ──────────────────────────────
 
 function computeRachatStep(status: string, hasDevis: boolean, refStatuses: string[]): number {
-  // Check if any reference is in retractation
   const hasRetractation = refStatuses.some((s) => s === "en_retractation" || s === "bloque");
   const hasDevisEnvoye = refStatuses.some((s) => s === "devis_envoye");
+  const hasAttentePaiement = refStatuses.some((s) => s === "en_attente_paiement");
 
   if (hasDevis) {
     if (status === "brouillon") return 0;
     if (status === "finalise") return 4;
-    if (status === "retracte" || status === "refuse") return 4;
     if (hasRetractation) return 3;
+    if (hasAttentePaiement) return 3;
     if (hasDevisEnvoye) return 1;
-    // accepte or en_cours with devis accepted
     return 2;
   }
   if (status === "brouillon") return 0;
   if (status === "finalise") return 3;
-  if (status === "retracte") return 3;
   if (hasRetractation) return 2;
-  if (status === "en_retractation") return 2;
+  if (hasAttentePaiement) return 2;
   return 1;
 }
 
@@ -109,8 +107,7 @@ function computeVenteStep(
 ): number {
   if (hasOrInvest) {
     if (status === "brouillon") return 0;
-    if (status === "termine") return 5;
-    if (status === "annule") return 5;
+    if (status === "finalise") return 5;
     if (allLivre) return 4;
     switch (worstFulfillment) {
       case "recu":
@@ -125,8 +122,7 @@ function computeVenteStep(
     }
   }
   if (status === "brouillon") return 0;
-  if (status === "termine") return 3;
-  if (status === "annule") return 3;
+  if (status === "finalise") return 3;
   if (allLivre) return 2;
   return 1;
 }
@@ -134,7 +130,8 @@ function computeVenteStep(
 function computeDepotVenteStep(status: string, allRefsTerminal: boolean): number {
   if (status === "brouillon") return 0;
   if (allRefsTerminal) return 3;
-  if (status === "finalise") return 2;
+  if (status === "en_cours") return 2;
+  if (status === "finalise") return 3;
   return 1;
 }
 

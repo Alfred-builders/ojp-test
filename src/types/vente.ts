@@ -1,5 +1,3 @@
-export type VenteStatus = "brouillon" | "en_cours" | "termine" | "annule";
-
 export type FulfillmentStatus = "pending" | "servi_stock" | "a_commander" | "commande" | "recu";
 
 export type ModeReglement = "especes" | "carte" | "virement" | "cheque";
@@ -13,11 +11,14 @@ export interface VenteLigne {
   metal: string | null;
   qualite: string | null;
   poids: number | null;
+  poids_brut: number | null;
+  poids_net: number | null;
   quantite: number;
   prix_unitaire: number;
   prix_total: number;
   taxe_applicable: boolean;
   montant_taxe: number;
+  type_taxe: "tva_marge" | "tfop" | null;
   fulfillment: FulfillmentStatus;
   fonderie_id: string | null;
   bon_commande_id: string | null;

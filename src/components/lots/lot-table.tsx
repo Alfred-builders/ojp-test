@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, Package } from "@phosphor-icons/react";
-import type { LotWithDossier, RachatStatus } from "@/types/lot";
+import type { LotWithDossier, LotStatus } from "@/types/lot";
 import {
   Table,
   TableHeader,
@@ -79,7 +79,7 @@ export function LotTable({ data, basePath = "/lots", lotType = "rachat", totalIt
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [statusFilters, setStatusFilters] = useState<RachatStatus[]>([]);
+  const [statusFilters, setStatusFilters] = useState<LotStatus[]>([]);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -107,7 +107,7 @@ export function LotTable({ data, basePath = "/lots", lotType = "rachat", totalIt
     }
 
     if (statusFilters.length > 0) {
-      result = result.filter((item) => statusFilters.includes(item.status as RachatStatus));
+      result = result.filter((item) => statusFilters.includes(item.status as LotStatus));
     }
 
     if (sortKey) {
@@ -200,7 +200,7 @@ export function LotTable({ data, basePath = "/lots", lotType = "rachat", totalIt
                     </TableCell>
                     <TableCell>{clientName}</TableCell>
                     <TableCell>
-                      <LotStatusBadge status={item.status as RachatStatus} />
+                      <LotStatusBadge status={item.status as LotStatus} outcome={(item as any).outcome} />
                     </TableCell>
                     <TableCell className="font-medium">
                       {formatCurrency(lotType === "depot_vente" ? item.total_prix_revente : item.total_prix_achat)}

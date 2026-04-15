@@ -15,6 +15,9 @@ import {
   ArrowCounterClockwise,
   ArrowUUpLeft,
   ShoppingCart,
+  PenNib,
+  Handshake,
+  Coins,
 } from "@phosphor-icons/react";
 import {
   Card,
@@ -30,8 +33,8 @@ import { getAvailableActions, getActionSummary } from "@/lib/actions/action-regi
 import { detectPaymentsDue } from "@/lib/reglements/detect-payments-due";
 import { ActionButton } from "./action-button";
 import { RestitutionDialog } from "./restitution-dialog";
-import { CommandeDialog } from "./commande-dialog";
 import { ReglementDialog } from "@/components/reglements/reglement-dialog";
+import { LivraisonDialog } from "./livraison-dialog";
 import { formatCurrency } from "@/lib/format";
 import type { ActionContext, LotAction } from "@/lib/actions/action-types";
 import type { PaymentDue } from "@/lib/reglements/detect-payments-due";
@@ -75,7 +78,7 @@ export function ActionDashboard({
   const [acomptePct, setAcomptePct] = useState(10);
   const [restitutionLot, setRestitutionLot] = useState<LotWithReferences | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<{ payment: PaymentDue; lotId: string } | null>(null);
-  const [commandeLotId, setCommandeLotId] = useState<string | null>(null);
+  const [livraisonLotId, setLivraisonLotId] = useState<string | null>(null);
 
   useEffect(() => {
     getSettingClient("business_rules").then((rules) => {
@@ -136,9 +139,11 @@ export function ActionDashboard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lots, documents, reglements, venteLignes, bonsCommande, dossier, retractationMs, acomptePct]);
 
+  const router = useRouter();
+
   const totalLots = lots.length;
   const terminalLots = lots.filter(
-    (l) => l.status === "finalise" || l.status === "termine" || l.status === "refuse" || l.status === "retracte"
+    (l) => l.status === "finalise"
   );
 
   if (totalLots === 0) return null;
@@ -154,7 +159,7 @@ export function ActionDashboard({
             <Lightning size={20} weight="duotone" />
             Actions en attente
             {rows.length > 0 && (
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <Badge variant="secondary">
                 {rows.length}
               </Badge>
             )}
@@ -172,7 +177,7 @@ export function ActionDashboard({
                 row={row}
                 onRestituer={(lot) => setRestitutionLot(lot)}
                 onPayment={(payment, lotId) => setSelectedPayment({ payment, lotId })}
-                onCommande={(lotId) => setCommandeLotId(lotId)}
+                onLivraison={(lotId) => setLivraisonLotId(lotId)}
               />
             ))
           )}
@@ -202,13 +207,14 @@ export function ActionDashboard({
         />
       )}
 
-      {commandeLotId && (
-        <CommandeDialog
-          open={!!commandeLotId}
-          onOpenChange={(open) => { if (!open) setCommandeLotId(null); }}
-          lotId={commandeLotId}
+      {livraisonLotId && (
+        <LivraisonDialog
+          open={!!livraisonLotId}
+          onOpenChange={(open) => { if (!open) setLivraisonLotId(null); }}
+          lotId={livraisonLotId}
         />
       )}
+
     </>
   );
 }
@@ -219,7 +225,9 @@ type ActionRowData =
   | { type: "devis"; label: string; lotHref?: string; primary: FlatAction; secondary: FlatAction }
   | { type: "retracter"; label: string; lotHref?: string; flat: FlatAction }
   | { type: "restituer"; label: string; lot: LotWithReferences }
+  | { type: "signer_contrat"; label: string; flat: FlatAction }
   | { type: "payment"; label: string; amount: number; lotHref?: string; flat: FlatAction }
+  | { type: "livraison"; label: string; lotId: string; flat: FlatAction }
   | { type: "generic"; label: string; lotHref?: string; flat: FlatAction };
 
 function buildRows(allActions: FlatAction[]): ActionRowData[] {
@@ -263,6 +271,18 @@ function buildRows(allActions: FlatAction[]): ActionRowData[] {
       continue;
     }
 
+    // Signer contrat dépôt-vente
+    if (action.id === "doc.signer_contrat_dpv") {
+      rows.push({ type: "signer_contrat", label: action.label, flat: allActions[i] });
+      continue;
+    }
+
+    // Livraison stock
+    if (action.id === "vente.livrer_stock" || action.id === "vente.livrer_client") {
+      rows.push({ type: "livraison", label: action.label, lotId: lot.id, flat: allActions[i] });
+      continue;
+    }
+
     // Payment
     if (action.scope === "payment" && action.paymentDue) {
       rows.push({
@@ -284,7 +304,21 @@ function buildRows(allActions: FlatAction[]): ActionRowData[] {
 
 // ── Action Row ──────────────────────────────────────────────
 
-function ActionIcon({ type }: { type: "devis" | "contrat" | "depot_vente" | "payment" | "vente" | "generic" }) {
+function ActionLabel({ label }: { label: string }) {
+  const parts = label.split(" | ");
+  if (parts.length === 2) {
+    return (
+      <span className="text-sm truncate">
+        <span className="font-semibold">{parts[0]}</span>
+        <span className="text-muted-foreground mx-1.5">|</span>
+        {parts[1]}
+      </span>
+    );
+  }
+  return <span className="text-sm truncate">{label}</span>;
+}
+
+function ActionIcon({ type }: { type: "devis" | "contrat" | "depot_vente" | "signer_contrat" | "payment" | "vente" | "generic" }) {
   const iconClass = "text-muted-foreground";
   const wrapClass = "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted";
 
@@ -293,6 +327,8 @@ function ActionIcon({ type }: { type: "devis" | "contrat" | "depot_vente" | "pay
       return <div className={wrapClass}><FileText size={16} weight="duotone" className={iconClass} /></div>;
     case "contrat":
       return <div className={wrapClass}><ShieldCheck size={16} weight="duotone" className={iconClass} /></div>;
+    case "signer_contrat":
+      return <div className={wrapClass}><PenNib size={16} weight="duotone" className={iconClass} /></div>;
     case "depot_vente":
       return <div className={wrapClass}><HandCoins size={16} weight="duotone" className={iconClass} /></div>;
     case "payment":
@@ -304,11 +340,11 @@ function ActionIcon({ type }: { type: "devis" | "contrat" | "depot_vente" | "pay
   }
 }
 
-function ActionRow({ row, onRestituer, onPayment, onCommande }: {
+function ActionRow({ row, onRestituer, onPayment, onLivraison }: {
   row: ActionRowData;
   onRestituer: (lot: LotWithReferences) => void;
   onPayment: (payment: PaymentDue, lotId: string) => void;
-  onCommande: (lotId: string) => void;
+  onLivraison: (lotId: string) => void;
 }) {
   const router = useRouter();
   switch (row.type) {
@@ -317,20 +353,11 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
         <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
           <div className="flex items-center gap-3 min-w-0">
             <ActionIcon type="devis" />
-            <span className="text-sm truncate">{row.label}</span>
+            <ActionLabel label={row.label} />
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {row.lotHref ? (
-              <>
-                <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><CheckCircle size={14} weight="duotone" />Accepter</Button>
-                <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><XCircle size={14} weight="duotone" />Refuser</Button>
-              </>
-            ) : (
-              <>
-                <ActionButton action={{ ...row.primary.action, label: "Accepter", variant: "outline" }} ctx={row.primary.ctx} />
-                <ActionButton action={{ ...row.secondary.action, label: "Refuser", variant: "outline" }} ctx={row.secondary.ctx} />
-              </>
-            )}
+            <ActionButton action={{ ...row.primary.action, label: "Accepter", variant: "outline", icon: "CheckCircle" }} ctx={row.primary.ctx} />
+            <ActionButton action={{ ...row.secondary.action, label: "Refuser", variant: "destructive", icon: "XCircle" }} ctx={row.secondary.ctx} />
           </div>
         </div>
       );
@@ -340,13 +367,9 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
         <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
           <div className="flex items-center gap-3 min-w-0">
             <ActionIcon type="contrat" />
-            <span className="text-sm truncate">{row.label}</span>
+            <ActionLabel label={row.label} />
           </div>
-          {row.lotHref ? (
-            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><XCircle size={14} weight="duotone" />Se rétracte</Button>
-          ) : (
-            <ActionButton action={{ ...row.flat.action, variant: "outline" }} ctx={row.flat.ctx} />
-          )}
+          <ActionButton action={{ ...row.flat.action, label: "Se rétracter", variant: "destructive" }} ctx={row.flat.ctx} />
         </div>
       );
 
@@ -355,9 +378,20 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
         <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
           <div className="flex items-center gap-3 min-w-0">
             <ActionIcon type="depot_vente" />
-            <span className="text-sm truncate">{row.label}</span>
+            <ActionLabel label={row.label} />
           </div>
           <Button size="sm" variant="outline" onClick={() => onRestituer(row.lot)}><ArrowUUpLeft size={14} weight="duotone" />Restituer un article</Button>
+        </div>
+      );
+
+    case "signer_contrat":
+      return (
+        <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <ActionIcon type="signer_contrat" />
+            <ActionLabel label={row.label} />
+          </div>
+          <ActionButton action={{ ...row.flat.action, label: "Marquer comme signé", variant: "outline", icon: "PenNib" }} ctx={row.flat.ctx} />
         </div>
       );
 
@@ -366,7 +400,7 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
         <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
           <div className="flex items-center gap-3 min-w-0">
             <ActionIcon type="payment" />
-            <span className="text-sm truncate">{row.label}</span>
+            <ActionLabel label={row.label} />
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
               {formatCurrency(row.amount)}
             </Badge>
@@ -386,6 +420,20 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
         </div>
       );
 
+    case "livraison":
+      return (
+        <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <ActionIcon type="vente" />
+            <ActionLabel label={row.label} />
+          </div>
+          <Button size="sm" variant="outline" onClick={() => onLivraison(row.lotId)}>
+            <Handshake size={14} weight="duotone" />
+            Livrer au client
+          </Button>
+        </div>
+      );
+
     case "generic": {
       const isCommander = row.flat.action.id === "vente.livrer";
       const btnLabel = isCommander ? "Commander les références" : "Voir";
@@ -393,12 +441,13 @@ function ActionRow({ row, onRestituer, onPayment, onCommande }: {
         <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
           <div className="flex items-center gap-3 min-w-0">
             <ActionIcon type={isCommander ? "vente" : "generic"} />
-            <span className="text-sm truncate">{row.label}</span>
+            <ActionLabel label={row.label} />
           </div>
-          {isCommander ? (
-            <Button size="sm" variant="outline" onClick={() => onCommande(row.flat.lot.id)}><ShoppingCart size={14} weight="duotone" />Commander</Button>
-          ) : row.lotHref ? (
-            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}><Package size={14} weight="duotone" />Voir</Button>
+          {row.lotHref ? (
+            <Button size="sm" variant="outline" onClick={() => router.push(row.lotHref!)}>
+              {isCommander ? <ShoppingCart size={14} weight="duotone" /> : <Package size={14} weight="duotone" />}
+              {btnLabel}
+            </Button>
           ) : (
             <ActionButton action={{ ...row.flat.action, label: btnLabel, variant: "outline" }} ctx={row.flat.ctx} />
           )}

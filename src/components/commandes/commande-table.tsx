@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, ClipboardText } from "@phosphor-icons/react";
 import type { LotWithDossier } from "@/types/lot";
-import type { VenteStatus } from "@/types/vente";
+import type { LotStatus } from "@/types/lot";
 import {
   Table,
   TableHeader,
@@ -179,7 +179,7 @@ export function CommandeTable({ data }: { data: LotWithDossier[] }) {
                     </TableCell>
                     <TableCell>{clientName}</TableCell>
                     <TableCell>
-                      <VenteStatusBadge status={item.status as VenteStatus} />
+                      <VenteStatusBadge status={item.status as LotStatus} />
                     </TableCell>
                     <TableCell className="font-medium">
                       {formatCurrency(item.total_prix_revente)}

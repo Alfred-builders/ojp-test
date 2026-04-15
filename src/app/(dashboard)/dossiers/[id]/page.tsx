@@ -1,7 +1,14 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParametres } from "@/lib/parametres";
+import { autoProcessExpiredRetractation } from "@/lib/actions/finalize-actions";
 import { DossierDetailPage } from "@/components/dossiers/dossier-detail-page";
+
+// Deduplicate across React double-renders in dev mode
+const cachedAutoProcess = cache(async (dossierId: string) => {
+  await autoProcessExpiredRetractation(dossierId);
+});
 import type { DossierWithClient } from "@/types/dossier";
 import type { Lot } from "@/types/lot";
 import type { DocumentWithRefs } from "@/types/document";
@@ -25,6 +32,9 @@ export default async function DossierDetailRoute({
     .single();
 
   if (!dossier) return notFound();
+
+  // Auto-process expired retractation before rendering (cached to prevent double-execution)
+  await cachedAutoProcess(id);
 
   const { data: lots } = await supabase
     .from("lots")

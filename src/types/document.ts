@@ -1,6 +1,6 @@
 export type DocumentType = "quittance_rachat" | "contrat_rachat" | "devis_rachat" | "contrat_depot_vente" | "confie_achat" | "quittance_depot_vente" | "facture_vente" | "facture_acompte" | "facture_solde" | "bon_commande" | "bon_livraison";
 
-export type DocumentStatus = "en_attente" | "accepte" | "refuse" | "signe" | "regle" | "emis";
+export type DocumentStatus = "en_attente" | "accepte" | "refuse" | "signe" | "regle" | "emis" | "annule";
 
 export interface DocumentRecord {
   id: string;

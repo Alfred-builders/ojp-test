@@ -22,11 +22,13 @@ export async function createBijouxStockEntry({
     nom: ref.designation,
     metaux: ref.metal,
     qualite: ref.qualite,
-    poids: ref.poids,
+    poids: ref.poids_net ?? ref.poids,
+    poids_brut: ref.poids_brut,
+    poids_net: ref.poids_net,
     prix_achat: ref.prix_achat,
     prix_revente: ref.prix_revente_estime,
     quantite: ref.quantite,
-    statut: isDepotVente ? "en_depot_vente" : "en_stock",
+    statut: isDepotVente ? "en_depot_vente" : "a_fondre",
   };
 
   if (isDepotVente) {
@@ -45,13 +47,13 @@ export async function createBijouxStockEntry({
   if (stockError) return { stockId: null, error: true };
 
   // Link stock entry to reference
-  const newStatus = isDepotVente ? "en_depot_vente" : "route_stock";
+  const newStatus = isDepotVente ? "en_depot_vente" : "route_fonderie";
   const { error: refError } = await mutate(
     supabase
       .from("lot_references")
       .update({ status: newStatus, destination_stock_id: stockEntry?.id ?? null })
       .eq("id", ref.id),
-    "Erreur lors de la mise a jour de la reference"
+    "Erreur lors de la mise à jour de la référence"
   );
 
   return { stockId: stockEntry?.id ?? null, error: !!refError };
@@ -81,9 +83,9 @@ export async function incrementOrInvestStock({
   const { error: refError } = await mutate(
     supabase
       .from("lot_references")
-      .update({ status: "route_stock" })
+      .update({ status: "en_attente_paiement" })
       .eq("id", ref.id),
-    "Erreur lors de la mise a jour du statut de la reference"
+    "Erreur lors de la mise à jour du statut de la référence"
   );
 
   return { error: !!refError };
@@ -104,7 +106,7 @@ export async function restituerReference({
       .from("lot_references")
       .update({ status: "rendu_client" })
       .eq("id", ref.id),
-    "Erreur lors de la restitution de la reference"
+    "Erreur lors de la restitution de la référence"
   );
   if (e1) return { error: true };
 
@@ -114,9 +116,24 @@ export async function restituerReference({
         .from("bijoux_stock")
         .update({ statut: "rendu_client" })
         .eq("id", ref.destination_stock_id),
-      "Erreur lors de la mise a jour du stock"
+      "Erreur lors de la mise à jour du stock"
     );
     if (e2) return { error: true };
+  }
+
+  // Passer les confiés d'achat liés à cette référence en annulé
+  const { data: docRefs } = await supabase
+    .from("document_references")
+    .select("document_id")
+    .eq("lot_reference_id", ref.id);
+
+  if (docRefs && docRefs.length > 0) {
+    const docIds = docRefs.map((dr) => dr.document_id);
+    await supabase
+      .from("documents")
+      .update({ status: "annule" })
+      .in("id", docIds)
+      .eq("type", "confie_achat");
   }
 
   return { error: false };

@@ -27,10 +27,14 @@ export default async function StockPage({
       .single(),
     supabase
       .from("bijoux_stock")
-      .select("*", { count: "exact", head: true }),
+      .select("*", { count: "exact", head: true })
+      .is("depot_vente_lot_id", null)
+      .not("statut", "in", "(a_fondre,fondu)"),
     supabase
       .from("bijoux_stock")
       .select("*")
+      .is("depot_vente_lot_id", null)
+      .not("statut", "in", "(a_fondre,fondu)")
       .order("date_creation", { ascending: false })
       .range(from, to),
     supabase

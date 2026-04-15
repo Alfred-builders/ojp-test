@@ -403,7 +403,7 @@ export function ReferenceFormOrInvest({
                   <CurrencyEur size={12} weight="duotone" />
                   Prix de rachat
                 </p>
-                <p className="text-lg font-bold text-primary">
+                <p className="text-lg font-bold text-foreground">
                   {formatCurrency(prixRachat)}
                 </p>
               </div>

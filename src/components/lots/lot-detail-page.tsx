@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
 import Link from "next/link";
 import { PreviewLink } from "@/components/preview/preview-link";
@@ -17,6 +17,7 @@ import {
   FloppyDisk,
   Diamond,
   Coins,
+  Receipt,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "@/lib/supabase/mutation";
@@ -38,7 +39,7 @@ import {
 import { Header } from "@/components/dashboard/header";
 import { LotStatusBadge } from "@/components/lots/lot-status-badge";
 import { RetractationTimer } from "@/components/actions/retractation-timer";
-import { ActionList } from "@/components/actions/action-list";
+import { LotActionsCard } from "@/components/actions/lot-actions-card";
 
 import { LotStepper } from "@/components/lots/lot-stepper";
 import { ReferenceCard } from "@/components/lots/reference-card";
@@ -51,8 +52,8 @@ import { detectPaymentsDue } from "@/lib/reglements/detect-payments-due";
 import { getAvailableActions } from "@/lib/actions/action-registry";
 import { executeAction } from "@/lib/actions/action-executor";
 import type { ActionContext } from "@/lib/actions/action-types";
-import type { LotWithReferences, LotReference, RachatStatus } from "@/types/lot";
-import { formatDate } from "@/lib/format";
+import type { LotWithReferences, LotReference, LotStatus } from "@/types/lot";
+import { formatDate, formatCurrency } from "@/lib/format";
 import type { Reglement } from "@/types/reglement";
 import type { OrInvestissement } from "@/types/or-investissement";
 
@@ -93,6 +94,38 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
   const [acomptePct, setAcomptePct] = useState(10);
   const [commissionDvPct, setCommissionDvPct] = useState(40);
 
+  // Track latest values in refs for cleanup on navigation away
+  const refsCountRef = useRef(lot.references.length);
+  const statusRef = useRef(lot.status);
+  useEffect(() => {
+    refsCountRef.current = lot.references.length;
+    statusRef.current = lot.status;
+  });
+
+  // Auto-delete empty brouillon lot when navigating away (not on strict-mode remount)
+  useEffect(() => {
+    const lotId = lot.id;
+
+    function cleanupIfEmpty() {
+      if (statusRef.current === "brouillon" && refsCountRef.current === 0) {
+        const sb = createClient();
+        sb.from("lots").delete().eq("id", lotId).then(() => {});
+      }
+    }
+
+    const handleBeforeUnload = () => cleanupIfEmpty();
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Listen for Next.js client-side navigation via popstate
+    const handlePopState = () => cleanupIfEmpty();
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [lot.id]);
+
   useEffect(() => {
     getSettingClient("business_rules").then((rules) => {
       if (rules) {
@@ -105,7 +138,7 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
 
   const supabase = createClient();
   const isBrouillon = lot.status === "brouillon";
-  const isTerminal = lot.status === "refuse" || lot.status === "retracte" || lot.status === "finalise";
+  const isTerminal = lot.status === "finalise";
   const isDepotVente = lot.type === "depot_vente";
   const clientName = `${lot.dossier.client.civility === "M" ? "M." : "Mme"} ${lot.dossier.client.first_name} ${lot.dossier.client.last_name}`;
 
@@ -142,8 +175,8 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
     const supabase = createClient();
     const { error } = await mutate(
       supabase.from("lot_references").delete().eq("id", refId),
-      "Erreur lors de la suppression de la reference",
-      "Reference supprimee"
+      "Erreur lors de la suppression de la référence",
+      "Référence supprimée"
     );
     if (error) return;
     router.refresh();
@@ -177,7 +210,7 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
         }
       >
         <div className="flex items-center gap-2">
-          <LotStatusBadge status={lot.status as RachatStatus} />
+          <LotStatusBadge status={lot.status as LotStatus} outcome={lot.outcome} />
           {lot.status === "brouillon" && (
             <Button
               size="sm"
@@ -197,13 +230,6 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
               <FloppyDisk size={16} weight="duotone" />
               {saving ? "Enregistrement..." : "Enregistrer"}
             </Button>
-          )}
-          {/* Lot-level actions in header */}
-          {availableActions.filter((a) => a.scope === "lot").length > 0 && (
-            <ActionList
-              actions={availableActions.filter((a) => a.scope === "lot")}
-              ctx={actionCtx}
-            />
           )}
         </div>
       </Header>
@@ -280,15 +306,18 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
           allRefsTerminal={lot.references.length > 0 && lot.references.every((r) =>
             ["finalise", "retracte", "devis_refuse", "vendu", "rendu_client"].includes(r.status)
           )}
-          isError={lot.status === "retracte" || lot.status === "refuse"}
+          isError={lot.outcome === "retracte" || lot.outcome === "refuse"}
           referenceStatuses={lot.references.map((r) => r.status)}
         />
 
-        {/* Retractation timer */}
-        {lot.status === "en_retractation" && (
-          <RetractationTimer
-            startDate={lot.date_acceptation}
-            endDate={lot.date_fin_retractation}
+        {/* Actions en attente */}
+        {!isBrouillon && !isTerminal && (
+          <LotActionsCard
+            actions={availableActions}
+            ctx={actionCtx}
+            lot={lot}
+            dossierClient={lot.dossier.client}
+            lotId={lot.id}
           />
         )}
 
@@ -297,35 +326,40 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Package size={20} weight="duotone" />
-              References ({lot.references.length})
+              Références ({lot.references.length})
             </CardTitle>
             {isBrouillon && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button variant="secondary" size="sm">
-                      <Plus size={14} weight="bold" />
-                      Reference
-                    </Button>
-                  }
-                />
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuItem
-                    onClick={() => { setShowFormBijoux(true); setShowFormOrInvest(false); }}
-                  >
-                    <Diamond size={16} weight="duotone" />
-                    Bijou
-                  </DropdownMenuItem>
-                  {!isDepotVente && (
+              isDepotVente ? (
+                <Button variant="secondary" size="sm" onClick={() => { setShowFormBijoux(true); setShowFormOrInvest(false); }}>
+                  <Plus size={14} weight="bold" />
+                  Référence
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button variant="secondary" size="sm">
+                        <Plus size={14} weight="bold" />
+                        Référence
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem
+                      onClick={() => { setShowFormBijoux(true); setShowFormOrInvest(false); }}
+                    >
+                      <Diamond size={16} weight="duotone" />
+                      Bijoux
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => { setShowFormOrInvest(true); setShowFormBijoux(false); }}
                     >
                       <Coins size={16} weight="duotone" />
                       Or Investissement
                     </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
             )}
           </CardHeader>
           <CardContent className="space-y-4">
@@ -373,6 +407,7 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
                       onClose={() => setEditingRef(null)}
                       editData={ref}
                       lotType={isDepotVente ? "depot_vente" : "rachat"}
+                      commissionDvPct={commissionDvPct}
                     />
                   ) : (
                     <ReferenceFormOrInvest
@@ -398,6 +433,7 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
                   onRestituer={(id) => handleRefAction("ref.restituer", id)}
                   canRestituer={isDepotVente && lot.status === "finalise"}
                   hideTypeRachat={isDepotVente}
+                  isDepotVente={isDepotVente}
                   onValiderRachat={(id) => handleRefAction("ref.valider_rachat", id)}
                   onRetracter={(id) => handleRefAction("ref.retracter", id)}
                   onAccepterDevis={(id) => handleRefAction("ref.accepter_devis", id)}
@@ -406,6 +442,97 @@ export function LotDetailPage({ lot, orInvestCatalog, typeLabel, documents = [],
                 )
               ))
             )}
+
+            {/* Récapitulatif prix */}
+            {lot.references.length > 0 && (() => {
+              const totalBrut = lot.references.reduce((sum, r) => sum + r.prix_achat * r.quantite, 0);
+
+              if (isDepotVente) {
+                const totalRevente = lot.references.reduce((sum, r) => sum + (r.prix_revente_estime ?? 0) * r.quantite, 0);
+                const totalCommission = totalRevente - totalBrut;
+                return (
+                  <div className="rounded-lg border bg-muted/50 px-4 py-3 space-y-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Receipt size={16} weight="duotone" className="text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">Récapitulatif</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-semibold text-foreground">Prix affiché</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(totalRevente)}</span>
+                    </div>
+                    <div className="mt-3 space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Commission ({commissionDvPct} %)</span>
+                        <span className="font-medium text-muted-foreground">− {formatCurrency(totalCommission)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">Prix net déposant</span>
+                        <span className="text-lg font-bold">{formatCurrency(totalBrut)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              const totalTPV = lot.references
+                .filter((r) => r.regime_fiscal === "TPV")
+                .reduce((sum, r) => sum + r.montant_taxe * r.quantite, 0);
+              const totalTMP = lot.references
+                .filter((r) => r.regime_fiscal === "TMP")
+                .reduce((sum, r) => sum + r.montant_taxe * r.quantite, 0);
+              const totalTFOP = lot.references
+                .filter((r) => r.regime_fiscal === "TFOP")
+                .reduce((sum, r) => sum + r.montant_taxe * r.quantite, 0);
+              const totalTaxe = totalTPV + totalTMP + totalTFOP;
+              const totalNet = totalBrut - totalTaxe;
+              const taxeLineCount = (totalTPV > 0 ? 1 : 0) + (totalTMP > 0 ? 1 : 0) + (totalTFOP > 0 ? 1 : 0);
+              return (
+                <div className="rounded-lg border bg-muted/50 px-4 py-3 space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Receipt size={16} weight="duotone" className="text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Récapitulatif</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-foreground">Prix brut</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(totalBrut)} HT</span>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    {totalTPV > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">TPV (Taxe sur les Plus-Values)</span>
+                        <span className="font-medium text-muted-foreground">− {formatCurrency(totalTPV)}</span>
+                      </div>
+                    )}
+                    {totalTMP > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">TMP (Taxe sur les Métaux Précieux)</span>
+                        <span className="font-medium text-muted-foreground">− {formatCurrency(totalTMP)}</span>
+                      </div>
+                    )}
+                    {totalTFOP > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">TFOP (Taxe Forfaitaire Objets Précieux)</span>
+                        <span className="font-medium text-muted-foreground">− {formatCurrency(totalTFOP)}</span>
+                      </div>
+                    )}
+                    {totalTaxe > 0 && taxeLineCount > 1 && (
+                      <div className="border-t pt-1 mt-1 flex items-center justify-between text-sm">
+                        <span className="font-semibold text-foreground">Total taxes</span>
+                        <span className="font-semibold text-foreground">− {formatCurrency(totalTaxe)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold">Prix de rachat net</span>
+                      <span className="text-lg font-bold">{formatCurrency(totalNet)} TTC</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 

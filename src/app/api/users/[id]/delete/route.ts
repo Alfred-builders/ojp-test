@@ -8,7 +8,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Rate limiting
     const { success } = await sensitiveApiLimiter.limit(getClientIp(request));
     if (!success) return rateLimitResponse();
 
@@ -40,7 +39,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    // Prevent deleting another proprietaire
     const { data: targetProfile } = await supabaseAdmin
       .from("profiles")
       .select("role")
@@ -61,28 +59,20 @@ export async function DELETE(
       );
     }
 
-    // Delete user preferences
-    await supabaseAdmin
-      .from("user_preferences")
-      .delete()
-      .eq("user_id", id);
-
-    // Delete profile (cascade should handle related data)
+    // Soft delete : marquer comme "deleted" au lieu de supprimer
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .delete()
+      .update({ status: "deleted" })
       .eq("id", id);
 
     if (profileError) {
       return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 400 });
     }
 
-    // Delete from Supabase Auth
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
-
-    if (authError) {
-      return NextResponse.json({ error: "Erreur lors de la suppression du compte" }, { status: 400 });
-    }
+    // Bannir de Supabase Auth pour empêcher la connexion
+    await supabaseAdmin.auth.admin.updateUserById(id, {
+      ban_duration: "876000h",
+    });
 
     return NextResponse.json({ success: true });
   } catch {

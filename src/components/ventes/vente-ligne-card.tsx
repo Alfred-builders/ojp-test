@@ -57,16 +57,68 @@ export function VenteLigneCard({ ligne, onEdit, onDelete, canEdit, showLivraison
   async function toggleLivre() {
     setToggling(true);
     const supabase = createClient();
+    const newValue = !ligne.is_livre;
     const { error } = await mutate(
       supabase
         .from("vente_lignes")
-        .update({ is_livre: !ligne.is_livre })
+        .update({ is_livre: newValue })
         .eq("id", ligne.id),
       "Erreur lors de la mise à jour de la livraison",
-      "Ligne de vente mise à jour"
+      newValue ? "Article livré au client" : "Livraison annulée"
     );
+    if (error) { setToggling(false); return; }
+
+    // Check auto-finalization when marking as delivered
+    if (newValue && ligne.lot_id) {
+      const { data: allLignes } = await supabase
+        .from("vente_lignes")
+        .select("fulfillment, is_livre")
+        .eq("lot_id", ligne.lot_id);
+
+      const allLivre = (allLignes ?? []).every(
+        (l) => l.is_livre || false // current line already updated in DB
+      );
+      const allFulfilled = (allLignes ?? []).every(
+        (l) => l.fulfillment === "servi_stock" || l.fulfillment === "recu"
+      );
+
+      if (allLivre && allFulfilled) {
+        // Check if all factures are paid
+        const { data: lotDocs } = await supabase
+          .from("documents")
+          .select("status, type")
+          .eq("lot_id", ligne.lot_id)
+          .in("type", ["facture_vente", "facture_acompte", "facture_solde"]);
+        const allPaid = (lotDocs ?? []).every((d) => d.status === "regle");
+
+        if (allPaid) {
+          const { data: lot } = await supabase
+            .from("lots")
+            .select("id, status, dossier_id")
+            .eq("id", ligne.lot_id)
+            .single();
+
+          if (lot && lot.status === "en_cours") {
+            await supabase.from("lots").update({
+              status: "finalise",
+              outcome: "complete",
+              date_finalisation: new Date().toISOString(),
+            }).eq("id", lot.id);
+
+            // Check dossier finalization
+            const { data: allLots } = await supabase
+              .from("lots")
+              .select("status")
+              .eq("dossier_id", lot.dossier_id);
+            if ((allLots ?? []).every((l) => l.status === "finalise")) {
+              await supabase.from("dossiers").update({ status: "finalise" }).eq("id", lot.dossier_id);
+            }
+          }
+        }
+      }
+    }
+
     setToggling(false);
-    if (error) return;
     onLivraisonChange?.();
   }
 
@@ -87,7 +139,7 @@ export function VenteLigneCard({ ligne, onEdit, onDelete, canEdit, showLivraison
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
             {ligne.metal && <span>{ligne.metal}</span>}
             {ligne.qualite && <span>· {ligne.qualite}</span>}
-            {ligne.poids && <span>· {ligne.poids}g</span>}
+            {(ligne.poids_net ?? ligne.poids) && <span>· {ligne.poids_net ?? ligne.poids}g</span>}
             {ligne.quantite > 1 && <span>· ×{ligne.quantite}</span>}
             {ligne.cout_reparation > 0 && (
               <span className="inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400">
@@ -152,7 +204,7 @@ export function VenteLigneCard({ ligne, onEdit, onDelete, canEdit, showLivraison
                     Retirer l&apos;article
                   </DialogTitle>
                   <DialogDescription>
-                    Retirer &quot;{ligne.designation}&quot; de la vente ? Le bijou sera remis en stock.
+                    Retirer &quot;{ligne.designation}&quot; de la vente ? Le bijoux sera remis en stock.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -177,8 +229,8 @@ export function VenteLigneCard({ ligne, onEdit, onDelete, canEdit, showLivraison
         )}
       </div>
 
-      {/* Bottom action row - livraison only (fulfillment is managed from /commandes) */}
-      {showLivraison && !ligne.is_livre && (!isOrInvest || isFulfilled) && (
+      {/* Bottom action row - livraison */}
+      {showLivraison && !ligne.is_livre && (isOrInvest ? isFulfilled : true) && (
         <div className="flex items-center gap-2 mt-3 pt-3 border-t">
           <Button size="sm" variant="secondary" disabled={toggling} onClick={toggleLivre}>
             <Package size={14} weight="duotone" />

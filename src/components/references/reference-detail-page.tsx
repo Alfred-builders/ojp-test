@@ -226,7 +226,9 @@ export function ReferenceDetailPage({
                 <CardContent>
                   {reference.metal && <DetailRow label="Métal" value={reference.metal} />}
                   {reference.qualite && <DetailRow label="Qualité" value={reference.qualite} />}
-                  {reference.poids != null && <DetailRow label="Poids" value={`${reference.poids} g`} />}
+                  {reference.poids_brut != null && <DetailRow label="Poids brut" value={`${reference.poids_brut} g`} />}
+                  {reference.poids_net != null && <DetailRow label="Poids net" value={`${reference.poids_net} g`} />}
+                  {reference.poids_brut == null && reference.poids != null && <DetailRow label="Poids" value={`${reference.poids} g`} />}
                   {reference.is_scelle && <DetailRow label="Scellé" value="Oui" />}
                   {reference.has_facture && <DetailRow label="Facture" value="Oui" />}
                 </CardContent>
@@ -266,7 +268,7 @@ export function ReferenceDetailPage({
                     label="Régime fiscal"
                     value={
                       <Badge variant="outline">
-                        {reference.regime_fiscal === "TPV" ? "Taxe sur plus-value" : "Taxe sur métaux précieux"}
+                        {reference.regime_fiscal === "TPV" ? "Taxe sur plus-value" : reference.regime_fiscal === "TFOP" ? "Taxe forfaitaire objets précieux" : "Taxe sur métaux précieux"}
                       </Badge>
                     }
                   />

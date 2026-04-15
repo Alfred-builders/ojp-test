@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, FolderOpen, WarningCircle } from "@phosphor-icons/react";
+import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, FolderOpen, WarningCircle, Lightning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import type { DossierWithClient, DossierStatus } from "@/types/dossier";
@@ -84,14 +84,16 @@ interface DossierTableProps {
   totalItems: number;
   page: number;
   pageSize: number;
+  actionCounts?: Record<string, number>;
 }
 
-export function DossierTable({ data, totalItems, page, pageSize }: DossierTableProps) {
+export function DossierTable({ data, totalItems, page, pageSize, actionCounts = {} }: DossierTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<DossierStatus | null>(null);
+  const [actionsFilter, setActionsFilter] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [deletingDossierId, setDeletingDossierId] = useState<string | null>(null);
@@ -140,6 +142,10 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
       result = result.filter((item) => item.status === statusFilter);
     }
 
+    if (actionsFilter) {
+      result = result.filter((item) => (actionCounts[item.id] ?? 0) > 0);
+    }
+
     if (sortKey) {
       result = [...result].sort((a, b) => {
         let aVal: string;
@@ -157,7 +163,7 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
     }
 
     return result;
-  }, [data, search, statusFilter, sortKey, sortDir]);
+  }, [data, search, statusFilter, actionsFilter, actionCounts, sortKey, sortDir]);
 
   function navigatePage(newPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -179,6 +185,8 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
         onSearchChange={setSearch}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
+        actionsFilter={actionsFilter}
+        onActionsFilterChange={setActionsFilter}
       />
       <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
         <Table className={filtered.length === 0 ? "h-full" : ""}>
@@ -196,13 +204,14 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
               <SortableHead sortKey="created_at" currentSort={sortKey} currentDir={sortDir} onSort={handleSort}>
                 Date
               </SortableHead>
+              <TableHead className="text-center">Actions</TableHead>
               <TableHead className="w-10 pr-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="h-24 px-4 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 px-4 text-center text-muted-foreground">
                   Aucun dossier trouvé.
                 </TableCell>
               </TableRow>
@@ -237,6 +246,16 @@ export function DossierTable({ data, totalItems, page, pageSize }: DossierTableP
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDate(item.created_at)}</TableCell>
+                  <TableCell className="text-center">
+                    {(actionCounts[item.id] ?? 0) > 0 ? (
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        <Lightning size={10} weight="duotone" className="mr-0.5" />
+                        {actionCounts[item.id]}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="pr-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger

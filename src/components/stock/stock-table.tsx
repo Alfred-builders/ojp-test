@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, Diamond, Factory } from "@phosphor-icons/react";
+import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Trash, Diamond, Factory, Package } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "@/lib/supabase/mutation";
 import type { BijouxStockWithOrigin } from "@/types/bijoux";
@@ -88,9 +88,10 @@ interface StockTableProps {
   totalItems: number;
   page: number;
   pageSize: number;
+  basePath?: string;
 }
 
-export function StockTable({ data, canEdit = true, totalItems, page, pageSize }: StockTableProps) {
+export function StockTable({ data, canEdit = true, totalItems, page, pageSize, basePath = "/stock" }: StockTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -162,14 +163,16 @@ export function StockTable({ data, canEdit = true, totalItems, page, pageSize }:
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
-      <StockToolbar
-        search={search}
-        onSearchChange={setSearch}
-        statutFilter={statutFilter}
-        onStatutFilterChange={setStatutFilter}
-        metauxFilter={metauxFilter}
-        onMetauxFilterChange={setMetauxFilter}
-      />
+      <div className="shrink-0">
+        <StockToolbar
+          search={search}
+          onSearchChange={setSearch}
+          statutFilter={statutFilter}
+          onStatutFilterChange={setStatutFilter}
+          metauxFilter={metauxFilter}
+          onMetauxFilterChange={setMetauxFilter}
+        />
+      </div>
       <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
             <Table className={filtered.length === 0 ? "h-full" : ""}>
               <TableHeader className="sticky top-0 z-10 bg-muted">
@@ -211,7 +214,7 @@ export function StockTable({ data, canEdit = true, totalItems, page, pageSize }:
                       <TableRow
                         key={item.id}
                         className="cursor-pointer bg-white dark:bg-card"
-                        onClick={() => router.push(`/stock/${item.id}`)}
+                        onClick={() => router.push(`${basePath}/${item.id}`)}
                       >
                         <TableCell className="pl-4">
                           <div className="flex items-center gap-3">
@@ -243,7 +246,7 @@ export function StockTable({ data, canEdit = true, totalItems, page, pageSize }:
                         <TableCell>{item.metaux ?? "—"}</TableCell>
                         <TableCell>{item.qualite ?? "—"}</TableCell>
                         <TableCell className="text-right">
-                          {item.poids !== null ? `${item.poids} g` : "—"}
+                          {item.poids_net !== null ? `${item.poids_net} g` : item.poids !== null ? `${item.poids} g` : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatCurrency(item.prix_achat)}
@@ -269,7 +272,7 @@ export function StockTable({ data, canEdit = true, totalItems, page, pageSize }:
                               <DropdownMenuItem
                                 onClick={(e: React.MouseEvent) => {
                                   e.stopPropagation();
-                                  router.push(`/stock/${item.id}`);
+                                  router.push(`${basePath}/${item.id}`);
                                 }}
                               >
                                 <Eye size={16} weight="duotone" />
@@ -291,6 +294,24 @@ export function StockTable({ data, canEdit = true, totalItems, page, pageSize }:
                                 >
                                   <Factory size={16} weight="duotone" />
                                   Envoyer en fonderie
+                                </DropdownMenuItem>
+                              )}
+                              {item.statut === "a_fondre" && (
+                                <DropdownMenuItem
+                                  onClick={async (e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    const supabase = createClient();
+                                    const { error } = await mutate(
+                                      supabase.from("bijoux_stock").update({ statut: "en_stock" }).eq("id", item.id),
+                                      "Erreur lors du passage en stock",
+                                      "Article remis en stock"
+                                    );
+                                    if (error) return;
+                                    router.refresh();
+                                  }}
+                                >
+                                  <Package size={16} weight="duotone" />
+                                  Remettre en stock
                                 </DropdownMenuItem>
                               )}
                               {canEdit && (
@@ -317,13 +338,15 @@ export function StockTable({ data, canEdit = true, totalItems, page, pageSize }:
               </TableBody>
             </Table>
       </div>
-      <DataTablePagination
-        totalItems={totalItems}
-        pageSize={pageSize}
-        currentPage={page}
-        onPageChange={navigatePage}
-        onPageSizeChange={navigatePageSize}
-      />
+      <div className="shrink-0">
+        <DataTablePagination
+          totalItems={totalItems}
+          pageSize={pageSize}
+          currentPage={page}
+          onPageChange={navigatePage}
+          onPageSizeChange={navigatePageSize}
+        />
+      </div>
     </div>
   );
 }

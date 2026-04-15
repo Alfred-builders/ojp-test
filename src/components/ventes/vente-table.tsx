@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowsDownUp, ArrowUp, ArrowDown, DotsThree, Eye, Storefront } from "@phosphor-icons/react";
 import type { LotWithDossier } from "@/types/lot";
-import type { VenteStatus } from "@/types/vente";
+import type { LotStatus } from "@/types/lot";
 import {
   Table,
   TableHeader,
@@ -77,7 +77,7 @@ export function VenteTable({ data, totalItems, page, pageSize }: VenteTableProps
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [statusFilters, setStatusFilters] = useState<VenteStatus[]>([]);
+  const [statusFilters, setStatusFilters] = useState<LotStatus[]>([]);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -105,7 +105,7 @@ export function VenteTable({ data, totalItems, page, pageSize }: VenteTableProps
     }
 
     if (statusFilters.length > 0) {
-      result = result.filter((item) => statusFilters.includes(item.status as VenteStatus));
+      result = result.filter((item) => statusFilters.includes(item.status as LotStatus));
     }
 
     if (sortKey) {
@@ -196,7 +196,7 @@ export function VenteTable({ data, totalItems, page, pageSize }: VenteTableProps
                     </TableCell>
                     <TableCell>{clientName}</TableCell>
                     <TableCell>
-                      <VenteStatusBadge status={item.status as VenteStatus} />
+                      <VenteStatusBadge status={item.status as LotStatus} />
                     </TableCell>
                     <TableCell className="font-medium">
                       {formatCurrency(item.total_prix_revente)}

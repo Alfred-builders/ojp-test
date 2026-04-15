@@ -3,7 +3,7 @@ import { DocumentationPage } from "@/components/documentation/documentation-page
 
 export default function DocumentationRoute() {
   return (
-    <PageWrapper title="Documentation" fullHeight>
+    <PageWrapper title="Documentation" fullHeight noPadding>
       <DocumentationPage />
     </PageWrapper>
   );

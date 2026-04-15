@@ -9,8 +9,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { mutate } from "@/lib/supabase/mutation";
-import { generateBonLivraison } from "@/lib/pdf/pdf-actions";
+import { createBonLivraison } from "@/lib/fonderie/create-bon-livraison";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,10 +29,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import type { BijouxStock } from "@/types/bijoux";
 import type { Fonderie } from "@/types/fonderie";
-import type { BonLivraisonGroupData } from "@/lib/pdf/blocks";
 
 interface StockPickerFonderieProps {
   open: boolean;
@@ -95,7 +93,7 @@ export function StockPickerFonderie({ open, onOpenChange, fonderies }: StockPick
     [stockItems, selectedIds],
   );
 
-  const totalPoids = selectedItems.reduce((sum, i) => sum + (i.poids ?? 0), 0);
+  const totalPoids = selectedItems.reduce((sum, i) => sum + (i.poids_net ?? i.poids ?? 0), 0);
 
   function toggleItem(id: string) {
     setSelectedIds((prev) => {
@@ -118,119 +116,8 @@ export function StockPickerFonderie({ open, onOpenChange, fonderies }: StockPick
     if (!fonderieId || selectedItems.length === 0) return;
     setSaving(true);
 
-    const supabase = createClient();
     const fonderie = fonderies.find((f) => f.id === fonderieId)!;
-
-    // Get current cours from parametres table
-    const { data: parametres } = await supabase
-      .from("parametres")
-      .select("prix_or, prix_argent, prix_platine")
-      .eq("id", 1)
-      .single();
-
-    const coursMap: Record<string, number> = {
-      Or: parametres?.prix_or ?? 0,
-      Argent: parametres?.prix_argent ?? 0,
-      Platine: parametres?.prix_platine ?? 0,
-    };
-
-    // Create bon de livraison
-    const { data: bdl, error: bdlError } = await mutate(
-      supabase
-        .from("bons_livraison")
-        .insert({ fonderie_id: fonderieId, numero: "" })
-        .select()
-        .single(),
-      "Erreur lors de la création du bon de livraison",
-      "Stock sélectionné"
-    );
-
-    if (bdlError || !bdl) {
-      setSaving(false);
-      return;
-    }
-
-    // Create lignes with snapshot data
-    const lignesPayload = selectedItems.map((item) => {
-      const coursMetal = coursMap[item.metaux ?? ""] ?? 0;
-      const titrage = parseInt(item.qualite ?? "0") || 0;
-      const coursGramme = coursMetal * (titrage / 1000);
-      const valeur = (item.poids ?? 0) * coursGramme;
-
-      return {
-        bon_livraison_id: bdl.id,
-        bijoux_stock_id: item.id,
-        designation: item.nom,
-        metal: item.metaux,
-        titrage_declare: item.qualite,
-        poids_declare: item.poids,
-        cours_utilise: coursGramme,
-        valeur_estimee: Math.round(valeur * 100) / 100,
-      };
-    });
-
-    const { error: lignesError } = await mutate(
-      supabase.from("bon_livraison_lignes").insert(lignesPayload),
-      "Erreur lors de la création des lignes du bon de livraison",
-      "Stock sélectionné"
-    );
-    if (lignesError) { setSaving(false); return; }
-
-    // Mark stock items as fondu
-    const { error: stockError } = await mutate(
-      supabase
-        .from("bijoux_stock")
-        .update({ statut: "fondu" })
-        .in("id", Array.from(selectedIds)),
-      "Erreur lors de la mise à jour du statut des articles",
-      "Stock sélectionné"
-    );
-    if (stockError) { setSaving(false); return; }
-
-    // Generate PDF
-    const groupMap = new Map<string, BonLivraisonGroupData>();
-    for (const lp of lignesPayload) {
-      const key = `${lp.metal ?? "Autre"}-${lp.titrage_declare ?? "?"}`;
-      if (!groupMap.has(key)) {
-        groupMap.set(key, {
-          metal: lp.metal ?? "Autre",
-          titrage: lp.titrage_declare ?? "?",
-          lignes: [],
-          sousTotal: { pieces: 0, poids: 0, valeur: 0 },
-        });
-      }
-      const group = groupMap.get(key)!;
-      group.lignes.push({
-        designation: lp.designation,
-        metal: lp.metal ?? "",
-        titrage: lp.titrage_declare ?? "",
-        poids: lp.poids_declare ?? 0,
-        cours: lp.cours_utilise ?? 0,
-        valeur: lp.valeur_estimee ?? 0,
-      });
-      group.sousTotal.pieces += 1;
-      group.sousTotal.poids += lp.poids_declare ?? 0;
-      group.sousTotal.valeur += lp.valeur_estimee ?? 0;
-    }
-
-    const groupes = Array.from(groupMap.values());
-    const poidsTotal = lignesPayload.reduce((s, l) => s + (l.poids_declare ?? 0), 0);
-    const valeurEstimee = lignesPayload.reduce((s, l) => s + (l.valeur_estimee ?? 0), 0);
-
-    await generateBonLivraison(bdl.id, {
-      date: formatDate(new Date().toISOString()),
-      fonderie: {
-        nom: fonderie.nom,
-        adresse: fonderie.adresse ?? undefined,
-        codePostal: fonderie.code_postal ?? undefined,
-        ville: fonderie.ville ?? undefined,
-        telephone: fonderie.telephone ?? undefined,
-        email: fonderie.email ?? undefined,
-      },
-      groupes,
-      poidsTotal,
-      valeurEstimee,
-    });
+    await createBonLivraison({ fonderieId, items: selectedItems, fonderie });
 
     setSaving(false);
     onOpenChange(false);
@@ -321,7 +208,7 @@ export function StockPickerFonderie({ open, onOpenChange, fonderies }: StockPick
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                         {item.metaux && <Badge variant="outline" className="text-[10px] px-1 py-0">{item.metaux}</Badge>}
                         {item.qualite && <span>{item.qualite}</span>}
-                        {item.poids && <span>· {item.poids}g</span>}
+                        {(item.poids_net ?? item.poids) && <span>· {item.poids_net ?? item.poids}g</span>}
                       </div>
                     </div>
                     {item.prix_achat != null && (

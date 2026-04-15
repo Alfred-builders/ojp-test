@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SquaresFour, Diamond, Coins, UsersThree, FolderOpen, ShoppingCart, Storefront, HandCoins, ClipboardText, Factory, UserGear } from "@phosphor-icons/react";
+import { SquaresFour, Diamond, Coins, UsersThree, FolderOpen, ShoppingCart, Storefront, HandCoins, ClipboardText, Factory, UserGear, Receipt, Fire } from "@phosphor-icons/react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -16,18 +16,24 @@ import type { UserRole } from "@/types/auth";
 
 const stockItems = [
   { title: "Bijoux", href: "/stock", icon: Diamond, disabled: false },
+  { title: "Confié d'achat", href: "/confie-achat", icon: HandCoins, disabled: false },
   { title: "Or Investissement", href: "/or-investissement", icon: Coins, disabled: false },
 ];
 
 const fonderieItems = [
   { title: "Fonderies", href: "/fonderies", icon: Factory, disabled: false },
-  { title: "Flux fonderie", href: "/commandes", icon: ClipboardText, disabled: false },
+  { title: "Routage", href: "/fonderie/routage", icon: ClipboardText, disabled: false },
+  { title: "Suivi", href: "/fonderie/suivi", icon: Fire, disabled: false },
 ];
 
 const commerceItems = [
   { title: "Rachat", href: "/lots", icon: ShoppingCart, disabled: false },
   { title: "Dépôt-vente", href: "/depot-vente", icon: HandCoins, disabled: false },
   { title: "Ventes", href: "/ventes", icon: Storefront, disabled: false },
+];
+
+const comptabiliteItems = [
+  { title: "Impôts", href: "/impots", icon: Receipt, disabled: false },
 ];
 
 const crmItems = [
@@ -105,7 +111,30 @@ export function SidebarNav({ role }: SidebarNavProps) {
 
       {isOwner && (
         <SidebarGroup>
-          <SidebarGroupLabel>Fournisseurs</SidebarGroupLabel>
+          <SidebarGroupLabel>Comptabilité</SidebarGroupLabel>
+          <SidebarSeparator className="mb-2" />
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-2">
+              {comptabiliteItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+                    disabled={item.disabled}
+                    render={item.disabled ? undefined : <Link href={item.href} />}
+                  >
+                    <item.icon size={18} weight="duotone" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+
+      {isOwner && (
+        <SidebarGroup>
+          <SidebarGroupLabel>Fonderie</SidebarGroupLabel>
           <SidebarSeparator className="mb-2" />
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">

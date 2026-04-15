@@ -10,6 +10,8 @@ export type LotActionId =
   | "lot.refuser_devis"
   | "lot.finaliser_rachat"
   | "lot.retracter"
+  // Document actions
+  | "doc.signer_contrat_dpv"
   // Dossier-level
   | "lot.finaliser_dossier";
 
@@ -31,7 +33,10 @@ export type PaymentActionId =
 
 export type VenteActionId =
   | "vente.terminer"
-  | "vente.livrer";
+  | "vente.livrer"
+  | "vente.livrer_client"
+  | "vente.livrer_stock"
+  | "vente.livrer_bijoux";
 
 export type ActionId = LotActionId | RefActionId | PaymentActionId | VenteActionId;
 

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
+import { NationalitySelect } from "@/components/ui/nationality-select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -331,7 +332,7 @@ export function IdentityDocumentSection({
 
               <div className="space-y-1.5">
                 <Label>Nationalité</Label>
-                <Input value={nationality} onChange={(e) => setNationality(e.target.value)} />
+                <NationalitySelect value={nationality} onValueChange={setNationality} />
               </div>
 
               <div className="space-y-1.5">
@@ -412,6 +413,13 @@ export function IdentityDocumentSection({
                   {doc.is_primary && (
                     <Badge variant="secondary" className="text-xs">Principal</Badge>
                   )}
+                  {doc.expiry_date ? (
+                    new Date(doc.expiry_date) >= new Date() ? (
+                      <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30">Valide</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30">Expiré</Badge>
+                    )
+                  ) : null}
                 </div>
                 <p className="text-sm font-medium">{doc.document_number}</p>
                 <div className="flex gap-4 text-xs text-muted-foreground">
@@ -499,7 +507,7 @@ export function IdentityDocumentSection({
 
           <div className="space-y-1.5">
             <Label>Nationalité</Label>
-            <Input value={nationality} onChange={(e) => setNationality(e.target.value)} />
+            <NationalitySelect value={nationality} onValueChange={setNationality} />
           </div>
 
           <div className="space-y-1.5">

@@ -97,11 +97,11 @@ export function ReglementsCard({ lotId, reglements, paymentsDue }: ReglementsCar
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Receipt size={18} weight="duotone" />
-            Reglements
+            Règlements
             {allPaid && (
               <Badge className="ml-auto bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                 <CheckCircle size={12} weight="duotone" className="mr-0.5" />
-                Tous regles
+                Tous réglés
               </Badge>
             )}
           </CardTitle>

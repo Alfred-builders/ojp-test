@@ -75,6 +75,7 @@ export interface TotauxInfo {
   totalBrut: number;
   taxe: number;
   netAPayer: number;
+  taxeLabel?: string;
 }
 
 // Helpers
@@ -159,8 +160,13 @@ export const CDV_CLAUSES: Array<{ title: string; body: string }> = [
 export const TEXTE_CONDITIONS_CONFIE =
   "Le vendeur déclare avoir atteint la majorité légale, être le propriétaire légitime des biens, agir à titre privé et que ces biens ne proviennent d'aucune activité illicite. La taxe sur les métaux précieux est acquittée par nos soins.";
 
-export const TEXTE_CONDITIONS_ACHAT =
+export const TEXTE_CONDITIONS_ACHAT_TMP =
   "Le vendeur déclare avoir atteint la majorité légale, être le propriétaire légitime des biens, agir à titre privé et que ces biens ne proviennent d'aucune activité illicite. La taxe sur les métaux précieux (11,5%) est acquittée par nos soins.";
+
+export const TEXTE_CONDITIONS_ACHAT_TFOP =
+  "Le vendeur déclare avoir atteint la majorité légale, être le propriétaire légitime des biens, agir à titre privé et que ces biens ne proviennent d'aucune activité illicite. La taxe forfaitaire sur les objets précieux (6,5%) est acquittée par nos soins si le montant de cession dépasse 5 000 €.";
+
+export const TEXTE_CONDITIONS_ACHAT = TEXTE_CONDITIONS_ACHAT_TMP;
 
 export const TEXTE_CONDITIONS_CONTRAT =
   `Si vous souhaitez exercer votre droit de rétractation dans les 48 heures à compter de la signature du contrat vous pouvez utiliser le formulaire détachable prévu à cet effet ou toute autre déclaration dénuée d'ambigüité exprimant votre volonté de vous rétracter conformément à l'article R224-4.

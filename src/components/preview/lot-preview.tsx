@@ -7,13 +7,14 @@ import { PreviewLink } from "@/components/preview/preview-link";
 import { LotStatusBadge } from "@/components/lots/lot-status-badge";
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { formatDate } from "@/lib/format";
-import type { RachatStatus } from "@/types/lot";
+import type { LotStatus } from "@/types/lot";
 
 interface LotData {
   id: string;
   numero: string;
   type: string;
   status: string;
+  outcome: string | null;
   total_prix_achat: number;
   total_prix_revente: number;
   notes: string | null;
@@ -82,7 +83,7 @@ export default function LotPreview({ id }: { id: string }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <span className="font-medium text-base">{lot.numero}</span>
-        <LotStatusBadge status={lot.status as RachatStatus} />
+        <LotStatusBadge status={lot.status as LotStatus} outcome={lot.outcome as import("@/types/lot").LotOutcome | null} />
       </div>
 
       <div className="divide-y">

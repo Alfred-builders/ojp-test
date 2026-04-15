@@ -1,8 +1,7 @@
 export const VENTE_STATUS_OPTIONS = [
   { value: "brouillon", label: "Brouillon" },
   { value: "en_cours", label: "En cours" },
-  { value: "termine", label: "Terminé" },
-  { value: "annule", label: "Annulé" },
+  { value: "finalise", label: "Finalisé" },
 ] as const;
 
 export const MODE_REGLEMENT_OPTIONS = [

@@ -137,12 +137,14 @@ export function OrInvestissementTable({ data, canEdit = true, totalItems, page, 
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
-      <OrInvestissementToolbar
-        search={search}
-        onSearchChange={setSearch}
-        metalFilter={metalFilter}
-        onMetalFilterChange={setMetalFilter}
-      />
+      <div className="shrink-0">
+        <OrInvestissementToolbar
+          search={search}
+          onSearchChange={setSearch}
+          metalFilter={metalFilter}
+          onMetalFilterChange={setMetalFilter}
+        />
+      </div>
       <div className="flex-1 min-h-0 overflow-auto rounded-lg border">
             <Table className={filtered.length === 0 ? "h-full" : ""}>
               <TableHeader className="sticky top-0 z-10 bg-muted">
@@ -259,13 +261,15 @@ export function OrInvestissementTable({ data, canEdit = true, totalItems, page, 
               </TableBody>
             </Table>
       </div>
-      <DataTablePagination
-        totalItems={totalItems}
-        pageSize={pageSize}
-        currentPage={page}
-        onPageChange={navigatePage}
-        onPageSizeChange={navigatePageSize}
-      />
+      <div className="shrink-0">
+        <DataTablePagination
+          totalItems={totalItems}
+          pageSize={pageSize}
+          currentPage={page}
+          onPageChange={navigatePage}
+          onPageSizeChange={navigatePageSize}
+        />
+      </div>
     </div>
   );
 }

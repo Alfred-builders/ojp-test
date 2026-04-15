@@ -9,6 +9,7 @@ import {
   Stamp,
   ArrowCounterClockwise,
   ArrowUUpLeft,
+  PenNib,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Stamp,
   ArrowCounterClockwise,
   ArrowUUpLeft,
+  PenNib,
 };
 
 interface ActionButtonProps {

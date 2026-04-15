@@ -24,7 +24,8 @@ import { triggerEmail } from "@/lib/email/trigger";
 import { formatDate, formatTime } from "@/lib/format";
 import type { ClientInfo, QuittanceDepotVenteLigne } from "@/lib/pdf/blocks";
 import type { LotWithVenteLignes } from "@/types/lot";
-import type { VenteStatus, VenteLigne } from "@/types/vente";
+import type { LotStatus } from "@/types/lot";
+import type { VenteLigne } from "@/types/vente";
 import type { Reglement } from "@/types/reglement";
 
 interface VenteStatusActionsProps {
@@ -52,7 +53,7 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
   const [showAnnuler, setShowAnnuler] = useState(false);
 
   const supabase = createClient();
-  const status = lot.status as VenteStatus;
+  const status = lot.status as LotStatus;
 
   const bijouxLignes = lot.lignes.filter((l) => !!l.bijoux_stock_id);
   const allLivrees = lot.lignes.length > 0 && lot.lignes.every((l) => l.is_livre);
@@ -85,16 +86,27 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
       if (ligne.bijoux_stock_id) {
         const { data: stockItem } = await supabase
           .from("bijoux_stock")
-          .select("depot_vente_lot_id")
+          .select("depot_vente_lot_id, statut")
           .eq("id", ligne.bijoux_stock_id)
           .single();
+
+        // Skip if already marked as vendu (processed by server-side finalization)
+        if (stockItem?.statut === "vendu") {
+          if (stockItem.depot_vente_lot_id) {
+            dvItemsByLot.set(stockItem.depot_vente_lot_id, [
+              ...(dvItemsByLot.get(stockItem.depot_vente_lot_id) ?? []),
+              { ligne, stockId: ligne.bijoux_stock_id },
+            ]);
+          }
+          continue;
+        }
 
         const { error: errStock } = await mutate(
           supabase
             .from("bijoux_stock")
             .update({ statut: "vendu" })
             .eq("id", ligne.bijoux_stock_id),
-          "Erreur lors du passage en vendu du bijou",
+          "Erreur lors du passage en vendu du bijoux",
           "Statut mis à jour"
         );
         if (errStock) return;
@@ -117,104 +129,50 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
       }
     }
 
-    // Phase 2: Generate quittances DV (BEFORE factures)
-    for (const [dvLotId, items] of dvItemsByLot.entries()) {
-      const { data: dvLot } = await supabase
+    // Quittances DPV are now generated server-side in processVenteLot (finalize-actions.ts)
+
+    // Phase 2b: Check if depot-vente lots can be finalized
+    for (const [dvLotId] of dvItemsByLot.entries()) {
+      const { data: dvLotData } = await supabase
         .from("lots")
-        .select("id, numero, dossier_id, dossier:dossiers(id, numero, client:clients(id, civility, first_name, last_name, address, postal_code, city))")
+        .select("dossier_id")
         .eq("id", dvLotId)
         .single();
-
-      if (!dvLot?.dossier) continue;
-
-      const dvDossier = dvLot.dossier as unknown as { id: string; numero: string; client: { id: string; civility: string; first_name: string; last_name: string; address: string | null; postal_code: string | null; city: string | null } };
-      const deposant = dvDossier.client;
-
-      const { data: idDoc } = await supabase
-        .from("client_identity_documents")
-        .select("document_type, document_number")
-        .eq("client_id", deposant.id)
-        .eq("is_primary", true)
-        .single();
-
-      const stockIds = items.map((i) => i.stockId);
-      const { data: lotRefs } = await supabase
-        .from("lot_references")
-        .select("destination_stock_id, prix_achat, designation")
-        .in("destination_stock_id", stockIds);
-
-      const refByStockId = new Map(
-        (lotRefs ?? []).map((r) => [r.destination_stock_id, r])
-      );
-
-      const lignesQdv: QuittanceDepotVenteLigne[] = [];
-      let totalVentes = 0;
-      let totalCommission = 0;
-      let totalNetDeposant = 0;
-
-      for (const { ligne, stockId } of items) {
-        const ref = refByStockId.get(stockId);
-        const prixVente = ligne.prix_total;
-        const netDeposant = ref?.prix_achat ?? prixVente * 0.6;
-        const commission = prixVente - netDeposant;
-
-        lignesQdv.push({
-          designation: ref?.designation ?? ligne.designation,
-          description: ligne.designation,
-          prixVentePublic: prixVente,
-          netDeposant,
-          commission,
-        });
-
-        totalVentes += prixVente;
-        totalCommission += commission;
-        totalNetDeposant += netDeposant;
-      }
-
-      const clientInfo: ClientInfo = {
-        civilite: deposant.civility === "M" ? "M." : "Mme",
-        nom: deposant.last_name,
-        prenom: deposant.first_name,
-        adresse: deposant.address ?? undefined,
-        codePostal: deposant.postal_code ?? undefined,
-        ville: deposant.city ?? undefined,
-        documentType: idDoc?.document_type ?? undefined,
-        documentNumber: idDoc?.document_number ?? undefined,
-      };
-
-      const qdvPath = await generateDocument({
-        type: "quittance_depot_vente",
-        lotId: dvLot.id,
-        dossierId: dvDossier.id,
-        clientId: deposant.id,
-        client: clientInfo,
-        dossier: { numeroDossier: dvDossier.numero, numeroLot: dvLot.numero, date: dateStr, heure: heureStr },
-        references: [],
-        totaux: { totalBrut: totalVentes, taxe: totalCommission, netAPayer: totalNetDeposant },
-        quittanceDepotVenteLignes: lignesQdv,
-        totalVentes,
-        totalCommission,
-        venteDossierNumero: lot.dossier.numero,
-      });
-      if (qdvPath) {
-        triggerEmail({
-          notification_type: "quittance_depot_vente",
-          lot_id: dvLot.id,
-          dossier_id: dvDossier.id,
-          client_id: deposant.id,
-          attachment_paths: [qdvPath],
-          extra_variables: {
-            montant_net: formatCurrency(totalNetDeposant),
-            montant_commission: formatCurrency(totalCommission),
-          },
-        });
+      if (dvLotData) {
+        // Vérifier si toutes les refs du lot DV sont terminées
+        const { data: dvRefs } = await supabase
+          .from("lot_references")
+          .select("status")
+          .eq("lot_id", dvLotId);
+        const allDone = (dvRefs ?? []).every(
+          (r: { status: string }) => ["vendu", "rendu_client", "finalise"].includes(r.status)
+        );
+        if (allDone) {
+          await supabase.from("lots").update({
+            status: "finalise",
+            outcome: "complete",
+            date_finalisation: new Date().toISOString(),
+          }).eq("id", dvLotId);
+          // Vérifier si le dossier DV peut aussi être finalisé
+          const { data: allDvLots } = await supabase
+            .from("lots")
+            .select("status")
+            .eq("dossier_id", dvLotData.dossier_id);
+          const dossierDone = (allDvLots ?? []).every(
+            (l: { status: string }) => l.status === "finalise"
+          );
+          if (dossierDone) {
+            await supabase.from("dossiers").update({ status: "finalise" }).eq("id", dvLotData.dossier_id);
+          }
+        }
       }
     }
 
     // Phase 3: Update lot status (factures are generated at "passer en cours")
     const { error: errLot } = await mutate(
       supabase.from("lots").update({
-        status: "termine",
+        status: "finalise",
+        outcome: "complete",
         mode_reglement: modeReglement,
         date_reglement: new Date().toISOString(),
         solde_paye: true,
@@ -261,7 +219,7 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
             .from("bijoux_stock")
             .update({ statut: revertStatus })
             .eq("id", ligne.bijoux_stock_id),
-          "Erreur lors de la remise en stock du bijou",
+          "Erreur lors de la remise en stock du bijoux",
           "Statut mis à jour"
         );
         if (errRevert) break;
@@ -269,7 +227,7 @@ export function VenteStatusActions({ lot, reglements = [], mode }: VenteStatusAc
     }
 
     const { error: errAnnule } = await mutate(
-      supabase.from("lots").update({ status: "annule" }).eq("id", lot.id),
+      supabase.from("lots").update({ status: "finalise", outcome: "annule" }).eq("id", lot.id),
       "Erreur lors de l'annulation du lot de vente",
       "Vente annulée"
     );

@@ -58,9 +58,9 @@ export function DestinationSelector({ lot }: DestinationSelectorProps) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{ref.designation}</p>
               <p className="text-xs text-muted-foreground">
-                {ref.categorie === "bijoux" ? "Bijou" : "Or Investissement"}
+                {ref.categorie === "bijoux" ? "Bijoux" : "Or Investissement"}
                 {ref.metal ? ` — ${ref.metal}` : ""}
-                {ref.poids ? ` — ${ref.poids}g` : ""}
+                {ref.poids_net ? ` — ${ref.poids_net}g` : ref.poids ? ` — ${ref.poids}g` : ""}
               </p>
             </div>
             <Select

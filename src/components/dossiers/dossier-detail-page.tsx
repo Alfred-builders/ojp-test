@@ -41,7 +41,6 @@ import { DossierRecapFinancier } from "@/components/dossiers/dossier-recap-finan
 import { DossierLotsSection } from "@/components/dossiers/dossier-lots-section";
 import { ActionDashboard } from "@/components/actions/action-dashboard";
 import { finaliserDossierAction } from "@/lib/actions/finalize-actions";
-import { triggerEmail } from "@/lib/email/trigger";
 import type { DossierWithClient, DossierStatus } from "@/types/dossier";
 import type { Lot, LotReference, LotWithReferences } from "@/types/lot";
 import type { VenteLigne } from "@/types/vente";
@@ -153,16 +152,6 @@ export function DossierDetailPage({
           router.refresh();
           return;
         }
-        // Fire-and-forget email triggers
-        for (const trigger of result.emailTriggers ?? []) {
-          triggerEmail({
-            notification_type: trigger.type,
-            lot_id: trigger.lotId,
-            dossier_id: trigger.dossierId,
-            client_id: trigger.clientId,
-            attachment_paths: trigger.paths,
-          });
-        }
       } catch (err) {
         console.error("[DOSSIER] finaliserDossierAction error:", err);
         toast.error("Erreur inattendue lors de la finalisation");
@@ -255,16 +244,6 @@ export function DossierDetailPage({
       setProcessing(false);
       if (result.success) {
         toast.success("Dossier finalisé");
-        // Fire-and-forget email triggers
-        for (const trigger of result.emailTriggers ?? []) {
-          triggerEmail({
-            notification_type: trigger.type,
-            lot_id: trigger.lotId,
-            dossier_id: trigger.dossierId,
-            client_id: trigger.clientId,
-            attachment_paths: trigger.paths,
-          });
-        }
         router.refresh();
       } else {
         toast.error(result.error ?? "Erreur lors de la finalisation du dossier");

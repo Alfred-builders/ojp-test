@@ -10,7 +10,7 @@ const publicRoutes = [
   "/auth/callback",
 ];
 
-const authRoutes = ["/sign-in", "/register", "/forgot-password"];
+const authRoutes = ["/sign-in", "/register"];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

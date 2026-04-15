@@ -300,7 +300,7 @@ export const categories: DocCategory[] = [
                     <CardContent className="space-y-2">
                       <p className="flex items-center gap-2 font-medium">
                         <Diamond size={16} weight="duotone" />
-                        Bijou
+                        Bijoux
                       </p>
                       <ul className="text-xs text-muted-foreground space-y-1">
                         <li><strong>Désignation</strong> — Nom de l&apos;article</li>
@@ -409,7 +409,7 @@ export const categories: DocCategory[] = [
                 <p>Quand le délai de 48h est expiré, cliquer sur <Button size="sm" className="cursor-default">Finaliser</Button></p>
                 <p>Le système effectue automatiquement :</p>
                 <ul className="list-disc space-y-1.5 pl-6 text-sm">
-                  <li>Création d&apos;une entrée dans le <AppLink href="/stock">stock bijoux</AppLink> pour chaque référence bijou (statut <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">En stock</Badge>)</li>
+                  <li>Création d&apos;une entrée dans le <AppLink href="/stock">stock bijoux</AppLink> pour chaque référence bijoux (statut <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">En stock</Badge>)</li>
                   <li>Incrémentation de la <strong>quantité</strong> dans le catalogue pour l&apos;or investissement</li>
                   <li>Génération d&apos;une <strong>quittance de rachat</strong> (PDF) récapitulant les articles, montants et taxes</li>
                   <li>Passage du lot en statut <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Finalisé</Badge></li>
@@ -427,7 +427,7 @@ export const categories: DocCategory[] = [
                 <p>Si des références sont de type <strong>Devis</strong>, elles passent en <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Devis envoyé</Badge> après finalisation du dossier.</p>
                 <p>Dans le tableau <strong>Documents</strong>, sur la ligne du devis, deux boutons apparaissent : <Button size="sm" className="cursor-default"><CheckCircle size={14} weight="duotone" />Accepter</Button> et <Button variant="destructive" size="sm" className="cursor-default"><XCircle size={14} weight="duotone" />Refuser</Button></p>
                 <ul className="list-disc space-y-1.5 pl-6 text-sm">
-                  <li><strong>Accepté (bijou)</strong> — La référence passe en rétractation (nouveau délai de 48h)</li>
+                  <li><strong>Accepté (bijoux)</strong> — La référence passe en rétractation (nouveau délai de 48h)</li>
                   <li><strong>Accepté (or investissement)</strong> — Finalisé immédiatement, stock incrémenté</li>
                   <li><strong>Refusé</strong> — La référence passe en <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Devis refusé</Badge> (terminal)</li>
                 </ul>
@@ -473,7 +473,7 @@ export const categories: DocCategory[] = [
                     <CardContent className="space-y-2">
                       <p className="flex items-center gap-2 font-medium">
                         <Diamond size={16} weight="duotone" />
-                        Bijou
+                        Bijoux
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Rechercher et sélectionner un article disponible dans le <AppLink href="/stock">stock bijoux</AppLink>.
@@ -593,7 +593,7 @@ export const categories: DocCategory[] = [
                 <p className="px-4 py-3 text-sm text-blue-700 dark:text-blue-400">
                   L&apos;approvisionnement et la livraison de l&apos;or investissement se gèrent directement sur la fiche vente.
                   Un stepper en haut de page permet de suivre la progression globale du lot.
-                  La page <AppLink href="/commandes">Commandes</AppLink> offre une vue d&apos;ensemble de toutes les commandes en cours.
+                  La page <AppLink href="/fonderie/routage">Commandes</AppLink> offre une vue d&apos;ensemble de toutes les commandes en cours.
                 </p>
               </div>
             ),
@@ -615,7 +615,7 @@ export const categories: DocCategory[] = [
             label: "Router les lignes",
             content: (
               <div className="space-y-3">
-                <p>Depuis la page <AppLink href="/commandes">Commandes</AppLink>, l&apos;onglet <strong>À commander</strong> liste toutes les lignes or investissement en attente.</p>
+                <p>Depuis la page <AppLink href="/fonderie/routage">Commandes</AppLink>, l&apos;onglet <strong>À commander</strong> liste toutes les lignes or investissement en attente.</p>
                 <p>Pour chaque ligne, choisir la destination :</p>
                 <ul className="list-disc space-y-1 pl-6 text-sm">
                   <li><strong>Stock</strong> — Servir depuis le stock existant (si quantité disponible)</li>
@@ -694,7 +694,7 @@ export const categories: DocCategory[] = [
                   <CardContent className="space-y-2">
                     <p className="flex items-center gap-2 font-medium">
                       <Diamond size={16} weight="duotone" />
-                      Formulaire bijou (dépôt-vente)
+                      Formulaire bijoux (dépôt-vente)
                     </p>
                     <ul className="text-xs text-muted-foreground space-y-1">
                       <li><strong>Désignation, Métal, Qualité, Poids, Quantité</strong> — Identique au rachat</li>
@@ -967,7 +967,7 @@ export const categories: DocCategory[] = [
               <div className="space-y-3">
                 <p>La page affiche un tableau avec recherche et tri par nom, ville ou téléphone.</p>
                 <p>Cliquer sur <Button size="sm" className="cursor-default"><Plus size={14} weight="bold" />Nouvelle fonderie</Button> pour ajouter un fournisseur.</p>
-                <p>Chaque fonderie peut ensuite être sélectionnée lors du routage des lignes dans la page <AppLink href="/commandes">Commandes</AppLink>.</p>
+                <p>Chaque fonderie peut ensuite être sélectionnée lors du routage des lignes dans la page <AppLink href="/fonderie/routage">Commandes</AppLink>.</p>
               </div>
             ),
           },

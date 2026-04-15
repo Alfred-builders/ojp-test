@@ -242,7 +242,7 @@ export function PdfTotaux({ totaux }: { totaux: TotauxInfo }) {
       React.createElement(Text, { style: s.totauxValue }, formatCurrency(totaux.totalBrut))
     ),
     React.createElement(View, { style: s.totauxRow },
-      React.createElement(Text, { style: s.totauxLabel }, "TAXE (TMP+CRDS)"),
+      React.createElement(Text, { style: s.totauxLabel }, totaux.taxeLabel ? totaux.taxeLabel.toUpperCase() : "TAXE (TMP+CRDS)"),
       React.createElement(Text, { style: s.totauxValue }, formatCurrency(totaux.taxe))
     ),
     React.createElement(View, { style: s.totauxSep }),

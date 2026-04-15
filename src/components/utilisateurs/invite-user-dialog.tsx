@@ -6,6 +6,9 @@ import {
   EnvelopeSimple,
   Key,
   UserPlus,
+  Copy,
+  Check,
+  Link as LinkIcon,
 } from "@phosphor-icons/react";
 import {
   Dialog,
@@ -34,6 +37,8 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   function reset() {
     setFirstName("");
@@ -42,6 +47,8 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
     setPassword("");
     setError(null);
     setSuccess(false);
+    setInviteLink(null);
+    setCopied(false);
     setMode("invite");
   }
 
@@ -64,6 +71,9 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
         return;
       }
 
+      if (data.inviteLink) {
+        setInviteLink(data.inviteLink);
+      }
       setSuccess(true);
       router.refresh();
     } finally {
@@ -74,6 +84,13 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
   function handleClose(open: boolean) {
     if (!open) reset();
     onOpenChange(open);
+  }
+
+  function handleCopyLink() {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   if (success) {
@@ -88,6 +105,25 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
                 : `Le compte de ${firstName} ${lastName} a été créé. Communiquez-lui ses identifiants : ${email} / ${password}`}
             </DialogDescription>
           </DialogHeader>
+          {inviteLink && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <LinkIcon size={12} weight="duotone" />
+                Lien d&apos;invitation
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={inviteLink}
+                  className="text-xs font-mono"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <Button variant="outline" size="icon-sm" onClick={handleCopyLink}>
+                  {copied ? <Check size={14} weight="bold" /> : <Copy size={14} weight="bold" />}
+                </Button>
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button onClick={() => handleClose(false)}>
               Fermer

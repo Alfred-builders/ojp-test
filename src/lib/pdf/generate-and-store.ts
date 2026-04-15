@@ -29,30 +29,6 @@ const DEFAULT_PREFIX_MAP: Record<DocumentType, string> = {
   bon_livraison: "BDL",
 };
 
-async function getNextNumero(type: DocumentType): Promise<string> {
-  const supabase = await createClient();
-  const prefixes = await getSettingServer("document_prefixes");
-  const prefix = prefixes?.[type] ?? DEFAULT_PREFIX_MAP[type];
-  const year = new Date().getFullYear().toString();
-  const pattern = `${prefix}-${year}-%`;
-
-  const { data } = await supabase
-    .from("documents")
-    .select("numero")
-    .like("numero", pattern)
-    .order("numero", { ascending: false })
-    .limit(1);
-
-  let seq = 1;
-  if (data && data.length > 0) {
-    const last = data[0].numero;
-    const match = last.match(/(\d+)$/);
-    if (match) seq = parseInt(match[1]) + 1;
-  }
-
-  return `${prefix}-${year}-${seq.toString().padStart(4, "0")}`;
-}
-
 export interface GenerateDocumentParams {
   type: DocumentType;
   lotId: string;
@@ -108,8 +84,31 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams, d
 
   try {
   await refreshSociete();
-  const numero = await getNextNumero(type);
+  const supabase = await createClient();
 
+  const emittedTypes = ["quittance_depot_vente", "bon_commande"];
+  const initialStatus = emittedTypes.includes(type) ? "emis" : "en_attente";
+
+  // 1. Reserve numero atomically via DB trigger (advisory lock prevents duplicates)
+  const { data: docRecord, error: insertError } = await supabase
+    .from("documents")
+    .insert({
+      type, numero: "", // trigger generates this atomically
+      lot_id: lotId, dossier_id: dossierId, client_id: clientId,
+      storage_path: "", // placeholder, updated after upload
+      status: initialStatus,
+      reference_numero: params.referenceNumero ?? null,
+    })
+    .select("id, numero")
+    .single();
+
+  if (insertError || !docRecord) {
+    return fail(`DB reserve: ${insertError?.message ?? "no record"}`);
+  }
+
+  const numero = docRecord.numero;
+
+  // 2. Generate PDF with the atomic numero
   let blob: Blob;
   const data = { numero, client, dossier, references, totaux };
 
@@ -175,11 +174,10 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams, d
     blob = await generateDevisRachat(data);
   }
 
-  // Upload to Supabase Storage
+  // 3. Upload PDF to storage
   const filename = `${numero}.pdf`;
   const storagePath = `${dossierId}/${lotId}/${filename}`;
 
-  const supabase = await createClient();
   const { error: uploadError } = await supabase.storage
     .from("documents")
     .upload(storagePath, blob, {
@@ -188,37 +186,24 @@ export async function generateAndStoreDocument(params: GenerateDocumentParams, d
     });
 
   if (uploadError) {
+    // Cleanup: remove the placeholder DB record
+    await supabase.from("documents").delete().eq("id", docRecord.id);
     return fail(`Upload: ${uploadError.message}`);
   }
 
-  const emittedTypes = ["quittance_rachat", "quittance_depot_vente", "bon_commande"];
-  const initialStatus = emittedTypes.includes(type) ? "emis" : "en_attente";
+  // 4. Update document with storage path
+  await supabase
+    .from("documents")
+    .update({ storage_path: storagePath })
+    .eq("id", docRecord.id);
 
-  const { error: dbError } = await supabase.from("documents").insert({
-    type, numero, lot_id: lotId, dossier_id: dossierId, client_id: clientId,
-    storage_path: storagePath, status: initialStatus,
-    reference_numero: params.referenceNumero ?? null,
-  });
-
-  if (dbError) {
-    await supabase.storage.from("documents").remove([storagePath]);
-    return fail(`DB insert: ${dbError.message}`);
-  }
-
+  // 5. Create document_references
   if (params.lotReferenceIds && params.lotReferenceIds.length > 0) {
-    const { data: docRecord } = await supabase
-      .from("documents")
-      .select("id")
-      .eq("storage_path", storagePath)
-      .single();
-
-    if (docRecord) {
-      const links = params.lotReferenceIds.map((refId) => ({
-        document_id: docRecord.id,
-        lot_reference_id: refId,
-      }));
-      await supabase.from("document_references").insert(links);
-    }
+    const links = params.lotReferenceIds.map((refId) => ({
+      document_id: docRecord.id,
+      lot_reference_id: refId,
+    }));
+    await supabase.from("document_references").insert(links);
   }
 
   console.log("[DOC-STORE] OK:", storagePath);

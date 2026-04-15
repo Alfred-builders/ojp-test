@@ -24,7 +24,7 @@ export default async function ParametresPage() {
   ]);
 
   return (
-    <PageWrapper title="Paramètres" fullHeight>
+    <PageWrapper title="Paramètres" fullHeight noPadding>
       <ParametresForm
         parametres={parametres}
         emailTemplates={emailTemplates}

@@ -4,8 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, FileText, Storefront, ArrowRight } from "@phosphor-icons/react";
-import { createClient } from "@/lib/supabase/client";
-import { mutate } from "@/lib/supabase/mutation";
+import { createSimpleBDC } from "@/lib/fonderie/create-bon-commande";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,15 +15,8 @@ import {
 } from "@/components/ui/card";
 import type { BonCommande } from "@/types/bon-commande";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { BDC_STATUS_CONFIG } from "@/lib/fonderie/status-config";
 import type { Reglement } from "@/types/reglement";
-
-const STATUT_BADGE: Record<string, { label: string; className: string }> = {
-  brouillon: { label: "Brouillon", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-  envoye: { label: "Envoyé", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  recu: { label: "Reçu", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  paye: { label: "Payé", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  annule: { label: "Annulé", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-};
 
 interface FonderieGroup {
   fonderie_id: string;
@@ -49,47 +41,16 @@ export function BonsCommandeList({ bonsCommande, ungroupedByFonderie }: BonsComm
 
   async function handleGenerateBDC(group: FonderieGroup) {
     setGenerating(true);
-    const supabase = createClient();
-    const { data: bdc, error } = await mutate(
-      supabase
-        .from("bons_commande")
-        .insert({ fonderie_id: group.fonderie_id, numero: "" })
-        .select()
-        .single(),
-      "Erreur lors de la création du bon de commande",
-      "Bon de commande généré"
-    );
-    if (error || !bdc) { setGenerating(false); return; }
-    const { error: updateErr } = await mutate(
-      supabase.from("vente_lignes").update({ bon_commande_id: bdc.id }).in("id", group.ligne_ids),
-      "Erreur lors de la mise à jour des lignes",
-      "Bon de commande généré"
-    );
-    if (updateErr) { setGenerating(false); return; }
+    await createSimpleBDC({ fonderie_id: group.fonderie_id, ligne_ids: group.ligne_ids });
     setGenerating(false);
     router.refresh();
   }
 
   async function handleGenerateAll() {
     setGenerating(true);
-    const supabase = createClient();
     for (const group of ungroupedByFonderie) {
-      const { data: bdc, error: bdcErr } = await mutate(
-        supabase
-          .from("bons_commande")
-          .insert({ fonderie_id: group.fonderie_id, numero: "" })
-          .select()
-          .single(),
-        "Erreur lors de la création du bon de commande",
-        "Bon de commande généré"
-      );
-      if (bdcErr || !bdc) break;
-      const { error: updateErr } = await mutate(
-        supabase.from("vente_lignes").update({ bon_commande_id: bdc.id }).in("id", group.ligne_ids),
-        "Erreur lors de la mise à jour des lignes",
-        "Bon de commande généré"
-      );
-      if (updateErr) break;
+      const result = await createSimpleBDC({ fonderie_id: group.fonderie_id, ligne_ids: group.ligne_ids });
+      if (!result.success) break;
     }
     setGenerating(false);
     router.refresh();
@@ -157,14 +118,14 @@ export function BonsCommandeList({ bonsCommande, ungroupedByFonderie }: BonsComm
           <CardContent className="p-0">
             <div className="divide-y">
               {visibleBons.map((bdc) => {
-                const badge = STATUT_BADGE[bdc.statut] ?? STATUT_BADGE.brouillon;
+                const badge = BDC_STATUS_CONFIG[bdc.statut] ?? BDC_STATUS_CONFIG.brouillon;
                 const fonderie = bdc.fonderie?.nom ?? "Fonderie";
                 const nbLignes = bdc.lignes?.length ?? 0;
 
                 return (
                   <Link
                     key={bdc.id}
-                    href={`/commandes/bdc/${bdc.id}`}
+                    href={`/fonderie/suivi/bdc/${bdc.id}`}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">

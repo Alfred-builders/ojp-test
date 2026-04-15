@@ -28,7 +28,7 @@ const entityRouteMap: Record<NotificationEntityType, string> = {
   dossier: "/dossiers",
   lot: "/lots",
   vente: "/ventes",
-  commande: "/commandes",
+  commande: "/fonderie/routage",
   client: "/clients",
 };
 

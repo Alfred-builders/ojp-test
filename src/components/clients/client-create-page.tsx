@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Header } from "@/components/dashboard/header";
 import { clientSchema, LEAD_SOURCE_OPTIONS } from "@/lib/validations/client";
+import { CountrySelect } from "@/components/ui/country-select";
 
 function FormField({
   label,
@@ -207,8 +208,8 @@ export function ClientCreatePage() {
               <FormField label="Ville" error={errors.city}>
                 <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Paris" />
               </FormField>
-              <FormField label="Pays" error={errors.country}>
-                <Input value={country} onChange={(e) => setCountry(e.target.value)} />
+              <FormField label="Pays *" error={errors.country}>
+                <CountrySelect value={country} onValueChange={(v) => setCountry(v)} />
               </FormField>
             </CardContent>
           </Card>

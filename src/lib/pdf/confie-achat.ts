@@ -76,7 +76,7 @@ function Doc({ data }: { data: ConfieAchatData }) {
       h(View, { style: s.bottomRight },
         h(View, { style: s.totGoldLine }),
         h(View, { style: s.totRow }, h(Text, { style: s.totLabel }, "TOTAL BRUT"), h(Text, { style: s.totValue }, fmt(totaux.totalBrut))),
-        h(View, { style: s.totRow }, h(Text, { style: s.totLabel }, "TAXE (TMP+CRDS)"), h(Text, { style: s.totValue }, fmt(totaux.taxe))),
+        h(View, { style: s.totRow }, h(Text, { style: s.totLabel }, totaux.taxeLabel ? totaux.taxeLabel.toUpperCase() : "TAXE (TMP+CRDS)"), h(Text, { style: s.totValue }, fmt(totaux.taxe))),
         h(View, { style: s.totSep }),
         h(View, { style: s.netRow }, h(Text, { style: s.netLabel }, "NET À PAYER"), h(Text, { style: s.netValue }, fmt(totaux.netAPayer))),
         h(View, { style: s.sigBlock }, h(Text, { style: s.sigLabel }, "Signature du vendeur"), h(View, { style: s.sigLine })))),

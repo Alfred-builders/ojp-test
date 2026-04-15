@@ -42,7 +42,7 @@ export default async function VentePage({ params }: { params: Promise<{ id: stri
       .order("date_reglement", { ascending: true }),
     supabase
       .from("documents")
-      .select("*")
+      .select("*, document_references(id, document_id, lot_reference_id)")
       .eq("lot_id", id)
       .order("created_at", { ascending: true }),
   ]);

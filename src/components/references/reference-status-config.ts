@@ -15,5 +15,6 @@ export const REF_STATUS_CONFIG: Record<ReferenceStatus, { label: string; classNa
   devis_accepte: { label: "Devis accepté", className: "bg-cyan-100 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/30" },
   devis_refuse: { label: "Devis refusé", className: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30" },
   en_retractation: { label: "En rétractation", className: "bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/30" },
+  en_attente_paiement: { label: "En attente de paiement", className: "bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/30" },
   finalise: { label: "Finalisé", className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30" },
 };

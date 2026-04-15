@@ -158,9 +158,9 @@ export function ParametresForm({ parametres, emailTemplates, settings }: Paramet
   const showGlobalSave = activeSection !== "emails";
 
   return (
-    <div className="flex flex-1 min-h-0 -m-6">
+    <div style={{ height: "100%" }} className="flex overflow-hidden">
       {/* Navigation latérale */}
-      <nav className="w-52 shrink-0 border-r overflow-y-auto py-6 pl-6 pr-2">
+      <nav className="w-52 shrink-0 border-r overflow-y-auto pt-6 pb-4 pl-6 pr-2">
         <div className="space-y-1">
           {NAV_ITEMS.map((item) => (
             <button
@@ -182,7 +182,10 @@ export function ParametresForm({ parametres, emailTemplates, settings }: Paramet
       </nav>
 
       {/* Contenu */}
-      <div className="min-w-0 flex-1 px-6 py-6">
+      <div className={cn("min-w-0 flex-1 flex flex-col", activeSection === "emails" ? "overflow-hidden" : "overflow-y-auto px-6 py-6")}>
+        {activeSection === "emails" ? (
+          <EmailTemplatesTab templates={emailTemplates} />
+        ) : (
         <div className="pb-8">
           {/* En-tête de section avec bouton de sauvegarde global */}
           <div className="mx-auto max-w-3xl mb-6 flex items-start justify-between gap-4">
@@ -415,11 +418,6 @@ export function ParametresForm({ parametres, emailTemplates, settings }: Paramet
             />
           )}
 
-          {/* Emails */}
-          {activeSection === "emails" && (
-            <EmailTemplatesTab templates={emailTemplates} />
-          )}
-
           {/* Notifications */}
           {activeSection === "notifications" && (
             <NotificationsTab
@@ -434,7 +432,6 @@ export function ParametresForm({ parametres, emailTemplates, settings }: Paramet
                     lot_retracted: true,
                     vente_created: true,
                     vente_finalized: true,
-                    vente_livree: true,
                     commande_received: true,
                     client_created: true,
                     system: true,
@@ -448,6 +445,7 @@ export function ParametresForm({ parametres, emailTemplates, settings }: Paramet
           )}
 
         </div>
+        )}
       </div>
     </div>
   );

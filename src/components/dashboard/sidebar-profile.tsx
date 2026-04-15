@@ -96,7 +96,7 @@ export function SidebarProfile({ profile, email, role }: SidebarProfileProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onSelect={handleLogout}
+              onClick={handleLogout}
             >
               <SignOut size={16} weight="duotone" />
               <span>Se déconnecter</span>

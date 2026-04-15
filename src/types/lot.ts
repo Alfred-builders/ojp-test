@@ -1,21 +1,8 @@
 export type LotType = "rachat" | "vente" | "depot_vente";
 
-export type RachatStatus =
-  | "brouillon"
-  | "devis_envoye"
-  | "accepte"
-  | "refuse"
-  | "en_retractation"
-  | "finalise"
-  | "retracte";
+export type LotStatus = "brouillon" | "en_cours" | "finalise";
 
-export type VenteStatus =
-  | "brouillon"
-  | "en_cours"
-  | "termine"
-  | "annule";
-
-export type LotStatus = RachatStatus | VenteStatus;
+export type LotOutcome = "complete" | "refuse" | "retracte" | "annule";
 
 export type ReferenceCategorie = "bijoux" | "or_investissement";
 
@@ -34,13 +21,14 @@ export type ReferenceStatus =
   | "devis_accepte"
   | "devis_refuse"
   | "en_retractation"
+  | "en_attente_paiement"
   | "finalise";
 
 export type ReferenceDestination = "stock_boutique" | "fonderie" | "depot_vente";
 
 export type TypeRachat = "direct" | "devis";
 
-export type RegimeFiscal = "TPV" | "TMP";
+export type RegimeFiscal = "TPV" | "TMP" | "TFOP";
 
 export interface Lot {
   id: string;
@@ -48,6 +36,7 @@ export interface Lot {
   dossier_id: string;
   type: LotType;
   status: LotStatus;
+  outcome: LotOutcome | null;
   total_prix_achat: number;
   total_prix_revente: number;
   marge_brute: number;
@@ -88,6 +77,8 @@ export interface LotReference {
   metal: "Or" | "Argent" | "Platine" | null;
   qualite: "333" | "375" | "585" | "750" | "999" | null;
   poids: number | null;
+  poids_brut: number | null;
+  poids_net: number | null;
   or_investissement_id: string | null;
   is_scelle: boolean;
   has_facture: boolean;

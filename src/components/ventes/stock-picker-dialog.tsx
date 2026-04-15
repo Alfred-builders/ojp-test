@@ -27,10 +27,10 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-/** TFOP bijoux : 6% + 0,5% CRDS = 6,5% sur la valeur (seuil 5 000 €) */
-function calculerTFOP(prixVente: number): number {
-  return Math.round(prixVente * 0.065 * 100) / 100;
-}
+import {
+  calculerTFOP,
+  calculerTVAMarge,
+} from "@/lib/calculations/taxes";
 import { formatCurrency } from "@/lib/format";
 import type { BijouxStock, Reparation } from "@/types/bijoux";
 
@@ -126,17 +126,25 @@ export function StockPickerForm({
     return reps.reduce((sum, r) => sum + (r.cout_reel ?? 0), 0);
   }, [selectedItem, reparationsMap]);
 
+  const isDepotVente = !!selectedItem?.depot_vente_lot_id;
   const prixBase = selectedItem?.prix_revente ?? 0;
+  const prixAchatOrigine = selectedItem?.prix_achat ?? 0;
   const prixVente = Math.round((prixBase + coutReparation) * 100) / 100;
-  const taxeApplicable = prixVente > 5000;
-  const montantTaxe = taxeApplicable ? calculerTFOP(prixVente) : 0;
+
+  // Dépôt-vente → TFOP (6,5% si > 5 000 €, pour le compte du déposant)
+  // Bijou racheté → TVA sur la marge (20% sur prix_vente - prix_achat)
+  const montantTaxe = isDepotVente
+    ? calculerTFOP(prixVente)
+    : calculerTVAMarge(prixVente, prixAchatOrigine);
+  const taxeApplicable = montantTaxe > 0;
+  const taxeLabel = isDepotVente ? "TFOP (6,5%)" : "TVA sur marge (20%)";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     if (!selectedItem) {
-      setError("Veuillez sélectionner un bijou du stock.");
+      setError("Veuillez sélectionner un bijoux du stock.");
       return;
     }
 
@@ -148,12 +156,15 @@ export function StockPickerForm({
       designation: selectedItem.nom,
       metal: selectedItem.metaux,
       qualite: selectedItem.qualite,
-      poids: selectedItem.poids,
+      poids: selectedItem.poids_net ?? selectedItem.poids,
+      poids_brut: selectedItem.poids_brut,
+      poids_net: selectedItem.poids_net,
       quantite: 1,
       prix_unitaire: prixVente,
       prix_total: prixVente,
       taxe_applicable: taxeApplicable,
       montant_taxe: montantTaxe,
+      type_taxe: isDepotVente ? "tfop" : (taxeApplicable ? "tva_marge" : null),
       cout_reparation: coutReparation,
     };
 
@@ -206,7 +217,7 @@ export function StockPickerForm({
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Diamond size={16} weight="duotone" />
-          {isEdit ? `Modifier — ${editData.designation}` : "Ajouter un bijou du stock"}
+          {isEdit ? `Modifier — ${editData.designation}` : "Ajouter un bijoux du stock"}
         </CardTitle>
         <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Fermer">
           <X size={14} weight="regular" />
@@ -230,7 +241,7 @@ export function StockPickerForm({
               >
                 <span className={selectedItem ? "text-foreground" : "text-muted-foreground"}>
                   {selectedItem
-                    ? `${selectedItem.nom} — ${selectedItem.metaux ?? ""} ${selectedItem.qualite ?? ""} (${selectedItem.poids ?? 0}g)`
+                    ? `${selectedItem.nom} — ${selectedItem.metaux ?? ""} ${selectedItem.qualite ?? ""} (${selectedItem.poids_net ?? selectedItem.poids ?? 0}g)`
                     : "Rechercher dans le stock..."}
                 </span>
                 <CaretUpDown size={14} weight="regular" className="text-muted-foreground shrink-0" />
@@ -258,7 +269,7 @@ export function StockPickerForm({
                     </p>
                   ) : filteredCatalog.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Aucun bijou disponible.
+                      Aucun bijoux disponible.
                     </p>
                   ) : (
                     filteredCatalog.map((item) => (
@@ -285,7 +296,7 @@ export function StockPickerForm({
                             </span>
                           )}
                           <span className="text-muted-foreground ml-1.5">
-                            — {item.metaux ?? "?"} {item.qualite ?? ""} ({item.poids ?? 0}g)
+                            — {item.metaux ?? "?"} {item.qualite ?? ""} ({item.poids_net ?? item.poids ?? 0}g)
                             {item.prix_revente ? ` — ${formatCurrency(item.prix_revente)}` : ""}
                           </span>
                         </div>
@@ -319,11 +330,16 @@ export function StockPickerForm({
                   <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Receipt size={12} weight="duotone" />
-                      TFOP (6,5%)
+                      {taxeLabel}
                     </p>
                     <p className="text-lg font-bold">
                       {formatCurrency(montantTaxe)}
                     </p>
+                    {!isDepotVente && prixAchatOrigine > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Marge : {formatCurrency(prixVente - prixAchatOrigine)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

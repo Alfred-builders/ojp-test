@@ -43,7 +43,7 @@ src/
 | Niveau | Classes Tailwind | Usage |
 |--------|-----------------|-------|
 | 0 | Pas de shadow | Inputs, badges, table rows |
-| 1 | `shadow-sm` | Cards, header, pagination, sidebar |
+| 1 | `shadow-sm` | Cards, header, pagination, sidebar, boutons (sauf ghost/link) |
 | 2 | `shadow-md ring-1 ring-foreground/10` | Popovers, dropdowns, selects |
 | 3 | `shadow-lg ring-1 ring-foreground/10` | Sheets, dialogs, menus imbriqués |
 

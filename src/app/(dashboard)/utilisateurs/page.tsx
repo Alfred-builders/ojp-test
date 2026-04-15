@@ -26,6 +26,7 @@ export default async function UtilisateursPage() {
   const { data: profiles } = await supabase
     .from("profiles")
     .select("*")
+    .neq("status", "deleted")
     .order("created_at", { ascending: true });
 
   return (

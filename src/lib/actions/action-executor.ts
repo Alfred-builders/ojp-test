@@ -36,6 +36,59 @@ export async function executeAction(params: {
     case "lot.retracter":
       return executeRetracterLot(supabase, ctx);
 
+    // Document actions
+    case "doc.signer_contrat_dpv": {
+      // 1. Marquer le contrat comme signé
+      const { error } = await supabase
+        .from("documents")
+        .update({ status: "signe" })
+        .eq("lot_id", ctx.lot.id)
+        .eq("type", "contrat_depot_vente");
+      if (error) return { success: false, error: error.message };
+
+      // 2. Marquer les confiés d'achat comme signés aussi
+      await supabase
+        .from("documents")
+        .update({ status: "signe" })
+        .eq("lot_id", ctx.lot.id)
+        .eq("type", "confie_achat")
+        .in("status", ["en_attente"]);
+
+      // 3. Créer les entrées stock et passer les refs en en_depot_vente
+      const clientId = ctx.dossier.client.id;
+      for (const ref of ctx.lot.references) {
+        if (ref.categorie === "bijoux" && ref.status === "en_expertise") {
+          const { data: stockEntry, error: stockErr } = await supabase
+            .from("bijoux_stock")
+            .insert({
+              nom: ref.designation,
+              metaux: ref.metal,
+              qualite: ref.qualite,
+              poids: ref.poids_net ?? ref.poids,
+              poids_brut: ref.poids_brut,
+              poids_net: ref.poids_net,
+              prix_achat: ref.prix_achat,
+              prix_revente: ref.prix_revente_estime,
+              quantite: ref.quantite,
+              statut: "en_depot_vente",
+              depot_vente_lot_id: ctx.lot.id,
+              deposant_client_id: clientId,
+            })
+            .select("id")
+            .single();
+          if (stockErr) return { success: false, error: `Erreur création stock: ${stockErr.message}` };
+          if (stockEntry) {
+            await supabase
+              .from("lot_references")
+              .update({ status: "en_depot_vente", destination_stock_id: stockEntry.id })
+              .eq("id", ref.id);
+          }
+        }
+      }
+
+      return { success: true };
+    }
+
     // Reference-level actions
     case "ref.valider_rachat":
       if (!referenceId) return { success: false, error: "referenceId requis" };
@@ -52,7 +105,7 @@ export async function executeAction(params: {
     case "ref.restituer": {
       if (!referenceId) return { success: false, error: "referenceId requis" };
       const ref = ctx.lot.references.find((r) => r.id === referenceId);
-      if (!ref) return { success: false, error: "Reference non trouvee" };
+      if (!ref) return { success: false, error: "Référence non trouvée" };
       return executeRestituerRef(supabase, ctx, referenceId, ref);
     }
 

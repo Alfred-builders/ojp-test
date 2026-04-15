@@ -14,7 +14,7 @@ export async function DashboardActivityServer() {
         .select(
           `id, numero, status, updated_at, ${DOSSIER_WITH_CLIENT}`,
         )
-        .in("status", ["finalise", "termine"])
+        .eq("status", "finalise")
         .order("updated_at", { ascending: false })
         .limit(10)),
       // Activite: Nouveaux dossiers
@@ -40,7 +40,7 @@ export async function DashboardActivityServer() {
     activityEvents.push({
       id: `lot-${lot.id}`,
       type: "lot_finalise",
-      description: `${lot.numero} ${lot.status === "termine" ? "terminé" : "finalisé"} — ${client?.first_name ?? ""} ${client?.last_name ?? ""}`.trim(),
+      description: `${lot.numero} finalisé — ${client?.first_name ?? ""} ${client?.last_name ?? ""}`.trim(),
       date: lot.updated_at,
       link: `/lots/${lot.id}`,
     });

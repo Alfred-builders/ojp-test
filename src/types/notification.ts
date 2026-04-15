@@ -6,7 +6,6 @@ export type AppNotificationType =
   | "lot_retracted"
   | "vente_created"
   | "vente_finalized"
-  | "vente_livree"
   | "commande_received"
   | "client_created"
   | "system";

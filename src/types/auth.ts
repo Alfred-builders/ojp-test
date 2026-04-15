@@ -1,5 +1,5 @@
 export type UserRole = "super_admin" | "proprietaire" | "vendeur";
-export type UserStatus = "pending" | "active" | "inactive";
+export type UserStatus = "pending" | "active" | "inactive" | "deleted";
 
 export interface UserProfile {
   id: string;
@@ -15,6 +15,8 @@ export interface UserProfile {
 export const OWNER_ONLY_ROUTES = [
   "/fonderies",
   "/commandes",
+  "/fonderie/routage",
+  "/fonderie/suivi",
   "/parametres",
   "/utilisateurs",
 ];
@@ -22,6 +24,7 @@ export const OWNER_ONLY_ROUTES = [
 export const OWNER_ONLY_PREFIXES = [
   "/fonderies/",
   "/commandes/",
+  "/fonderie/",
   "/parametres/",
   "/utilisateurs/",
   "/api/email/",

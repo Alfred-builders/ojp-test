@@ -5,6 +5,8 @@ export interface BijouxStock {
   photo_url: string | null;
   statut: "en_stock" | "vendu" | "reserve" | "en_depot_vente" | "rendu_client" | "en_reparation" | "fondu" | "a_fondre";
   poids: number | null;
+  poids_brut: number | null;
+  poids_net: number | null;
   quantite: number | null;
   titrage: string | null;
   metaux: "Or" | "Platine" | "Argent" | null;

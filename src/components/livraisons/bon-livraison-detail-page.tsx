@@ -9,9 +9,9 @@ import {
   Diamond,
   Package,
   CheckCircle,
-  Prohibit,
   WarningCircle,
   Check,
+  Lightning,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "@/lib/supabase/mutation";
@@ -25,16 +25,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Header } from "@/components/dashboard/header";
+import { DocumentsTable } from "@/components/documents/documents-table";
 import { formatDate, formatCurrency } from "@/lib/format";
+import { BDL_STATUS_CONFIG } from "@/lib/fonderie/status-config";
 import type { BonLivraison, BonLivraisonLigne } from "@/types/bon-livraison";
-
-const STATUT_CONFIG: Record<string, { label: string; className: string }> = {
-  brouillon: { label: "Brouillon", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-  envoye: { label: "Envoyé", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  recu: { label: "Reçu", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  traite: { label: "Traité", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  annule: { label: "Annulé", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-};
+import type { DocumentRecord } from "@/types/document";
 
 interface EcartState {
   titrage_reel: string;
@@ -44,15 +39,16 @@ interface EcartState {
 
 interface BonLivraisonDetailPageProps {
   bdl: BonLivraison;
+  documents?: DocumentRecord[];
 }
 
-export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
+export function BonLivraisonDetailPage({ bdl, documents = [] }: BonLivraisonDetailPageProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [savingEcarts, setSavingEcarts] = useState(false);
   const supabase = createClient();
 
-  const statutConfig = STATUT_CONFIG[bdl.statut] ?? STATUT_CONFIG.brouillon;
+  const statutConfig = BDL_STATUS_CONFIG[bdl.statut] ?? BDL_STATUS_CONFIG.brouillon;
   const fonderieName = bdl.fonderie?.nom ?? "Fonderie";
   const lignes = bdl.lignes ?? [];
   const nbEcarts = lignes.filter((l) => l.ecart_titrage || l.ecart_poids).length;
@@ -300,6 +296,89 @@ export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
           </Card>
         </div>
 
+        {/* Actions en attente */}
+        {bdl.statut !== "annule" && (() => {
+          const actionRows: Array<{ icon: React.ElementType; label: string; btn: React.ReactNode }> = [];
+
+          if (bdl.statut === "recu") {
+            actionRows.push({
+              icon: Check,
+              label: "Résultats fonderie | Saisir titrages et poids réels",
+              btn: (
+                <Button size="sm" variant="outline" disabled={savingEcarts} onClick={handleSaveEcarts}>
+                  <Check size={14} weight="bold" />
+                  {savingEcarts ? "..." : "Valider"}
+                </Button>
+              ),
+            });
+          }
+
+          if (bdl.statut === "envoye") {
+            actionRows.push({
+              icon: CheckCircle,
+              label: "Réception | Confirmer la réception par la fonderie",
+              btn: (
+                <Button size="sm" variant="outline" disabled={loading} onClick={handleRecu}>
+                  <CheckCircle size={14} weight="duotone" />
+                  {loading ? "..." : "Confirmer"}
+                </Button>
+              ),
+            });
+          }
+
+          if (bdl.statut === "brouillon") {
+            actionRows.push({
+              icon: Package,
+              label: "Envoi | Marquer comme envoyé à la fonderie",
+              btn: (
+                <Button size="sm" variant="outline" disabled={loading} onClick={handleEnvoyer}>
+                  <Package size={14} weight="duotone" />
+                  {loading ? "..." : "Envoyer"}
+                </Button>
+              ),
+            });
+          }
+
+          if (actionRows.length === 0) return null;
+
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightning size={20} weight="duotone" />
+                  Actions en attente
+                  <Badge variant="secondary">{actionRows.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {actionRows.map((row, i) => {
+                  const Icon = row.icon;
+                  const parts = row.label.split(" | ");
+                  return (
+                    <div key={i} className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                          <Icon size={16} weight="duotone" className="text-muted-foreground" />
+                        </div>
+                        <span className="text-sm truncate">
+                          <span className="font-semibold">{parts[0]}</span>
+                          {parts.length === 2 && (
+                            <>
+                              <span className="text-muted-foreground mx-1.5">|</span>
+                              {parts[1]}
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      {row.btn}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Références groupées par métal/titrage */}
         {Array.from(groups.values()).map((group) => {
           const groupPoids = group.lignes.reduce((s, l) => s + (l.poids_declare ?? 0), 0);
@@ -423,33 +502,10 @@ export function BonLivraisonDetailPage({ bdl }: BonLivraisonDetailPageProps) {
           );
         })}
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {bdl.statut === "brouillon" && (
-            <>
-              <Button disabled={loading} onClick={handleEnvoyer}>
-                <Package size={16} weight="duotone" />
-                {loading ? "En cours..." : "Marquer envoyé"}
-              </Button>
-              <Button variant="destructive" disabled={loading} onClick={handleAnnuler}>
-                <Prohibit size={16} weight="duotone" />
-                Annuler
-              </Button>
-            </>
-          )}
-          {bdl.statut === "envoye" && (
-            <Button disabled={loading} onClick={handleRecu}>
-              <CheckCircle size={16} weight="duotone" />
-              {loading ? "En cours..." : "Reçu par fonderie"}
-            </Button>
-          )}
-          {bdl.statut === "recu" && (
-            <Button disabled={savingEcarts} onClick={handleSaveEcarts}>
-              <Check size={16} weight="bold" />
-              {savingEcarts ? "Enregistrement..." : "Valider les résultats fonderie"}
-            </Button>
-          )}
-        </div>
+        {/* Documents */}
+        {documents.length > 0 && (
+          <DocumentsTable documents={documents} />
+        )}
       </div>
     </>
   );

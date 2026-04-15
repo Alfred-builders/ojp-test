@@ -31,8 +31,8 @@ import {
 import { Header } from "@/components/dashboard/header";
 import { VenteStatusBadge } from "@/components/ventes/vente-status-badge";
 import { formatCurrency } from "@/lib/format";
-import type { LotWithVenteLignes } from "@/types/lot";
-import type { VenteStatus, VenteLigne, FulfillmentStatus } from "@/types/vente";
+import type { LotWithVenteLignes, LotStatus } from "@/types/lot";
+import type { VenteLigne, FulfillmentStatus } from "@/types/vente";
 
 const FULFILLMENT_CONFIG: Record<FulfillmentStatus, { label: string; className: string }> = {
   pending: { label: "En attente", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
@@ -65,7 +65,7 @@ function computeCurrentStep(
   lignes: VenteLigne[],
   allFulfilled: boolean
 ): number {
-  if (lot.status === "termine" || lot.status === "finalise") return 4;
+  if (lot.status === "finalise") return 4;
   if (allFulfilled) {
     const allLivre = lignes.every((l) => l.is_livre);
     if (allLivre) return 3;
@@ -256,7 +256,7 @@ export function CommandeDetailPage({ lot, orInvestStock }: CommandeDetailPagePro
           </Button>
         }
       >
-        <VenteStatusBadge status={lot.status as VenteStatus} />
+        <VenteStatusBadge status={lot.status as LotStatus} />
       </Header>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">

@@ -39,8 +39,7 @@ import {
 import { LotStatusBadge } from "@/components/lots/lot-status-badge";
 import { VenteStatusBadge } from "@/components/ventes/vente-status-badge";
 import { formatDate, formatCurrency } from "@/lib/format";
-import type { Lot, RachatStatus } from "@/types/lot";
-import type { VenteStatus } from "@/types/vente";
+import type { Lot, LotStatus } from "@/types/lot";
 import type { DossierStatus } from "@/types/dossier";
 
 interface DossierLotsSectionProps {
@@ -139,14 +138,15 @@ export function DossierLotsSection({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">
-                    {formatCurrency(lot.type === "vente" || lot.type === "depot_vente" ? lot.total_prix_revente : lot.total_prix_achat)}
-                  </span>
-                  {lot.type === "vente" ? (
-                    <VenteStatusBadge status={lot.status as VenteStatus} />
-                  ) : (
-                    <LotStatusBadge status={lot.status as RachatStatus} />
-                  )}
+                  <div className="text-right">
+                    <span className="text-sm font-medium">
+                      {formatCurrency(lot.type === "vente" ? lot.total_prix_revente : lot.total_prix_achat)}
+                    </span>
+                    {lot.type === "depot_vente" && (
+                      <p className="text-xs text-muted-foreground">{formatCurrency(lot.total_prix_revente)} prix public</p>
+                    )}
+                  </div>
+                  <LotStatusBadge status={lot.status as LotStatus} outcome={(lot as any).outcome} />
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={<Button variant="ghost" size="icon-xs" />}

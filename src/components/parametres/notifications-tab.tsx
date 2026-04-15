@@ -76,7 +76,6 @@ const NOTIFICATION_GROUPS: NotificationGroup[] = [
     types: [
       { key: "vente_created", label: "Vente créée" },
       { key: "vente_finalized", label: "Vente finalisée" },
-      { key: "vente_livree", label: "Vente livrée" },
       { key: "commande_received", label: "Commande reçue" },
     ],
   },

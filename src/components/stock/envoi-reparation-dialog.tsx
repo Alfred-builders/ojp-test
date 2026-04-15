@@ -54,7 +54,7 @@ export function EnvoiReparationDialog({
         .from("bijoux_stock")
         .update({ statut: "en_reparation", updated_at: new Date().toISOString() })
         .eq("id", bijouId),
-      "Erreur lors de la mise à jour du statut du bijou",
+      "Erreur lors de la mise à jour du statut du bijoux",
       "Envoyé en réparation"
     );
     if (updateError) { setSaving(false); return; }
@@ -75,7 +75,7 @@ export function EnvoiReparationDialog({
             Envoyer en réparation
           </DialogTitle>
           <DialogDescription>
-            Le bijou sera marqué comme indisponible pendant la réparation.
+            Le bijoux sera marqué comme indisponible pendant la réparation.
           </DialogDescription>
         </DialogHeader>
 

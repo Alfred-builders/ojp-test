@@ -50,7 +50,7 @@ export default async function ProfilePage() {
   };
 
   return (
-    <PageWrapper title="Mon profil" fullHeight>
+    <PageWrapper title="Mon profil" >
       <ProfileForm
         profile={profileData}
         email={user!.email ?? ""}

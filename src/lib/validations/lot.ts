@@ -5,12 +5,8 @@ import { z } from "zod";
 // ============================================================
 export const LOT_STATUS_OPTIONS = [
   { value: "brouillon", label: "Brouillon" },
-  { value: "devis_envoye", label: "Devis envoyé" },
-  { value: "accepte", label: "Accepté" },
-  { value: "refuse", label: "Refusé" },
-  { value: "en_retractation", label: "En rétractation" },
+  { value: "en_cours", label: "En cours" },
   { value: "finalise", label: "Finalisé" },
-  { value: "retracte", label: "Rétracté" },
 ] as const;
 
 export const LOT_TYPE_OPTIONS = [

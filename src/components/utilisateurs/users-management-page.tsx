@@ -12,6 +12,11 @@ import {
   Trash,
   ShieldStar,
   UserSwitch,
+  UserCheck,
+  UserMinus,
+  Link as LinkIcon,
+  Copy,
+  Check,
 } from "@phosphor-icons/react";
 import type { UserProfile, UserRole } from "@/types/auth";
 import {
@@ -41,6 +46,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { toast } from "sonner";
@@ -61,6 +75,10 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   inactive: {
     label: "Inactif",
     className: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30",
+  },
+  deleted: {
+    label: "Supprimé",
+    className: "bg-gray-100 text-gray-500 hover:bg-gray-100 dark:bg-gray-900/30 dark:text-gray-400 dark:hover:bg-gray-900/30",
   },
 };
 
@@ -127,6 +145,10 @@ export function UsersManagementPage({
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [linkTarget, setLinkTarget] = useState<UserProfile | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const isSuperAdmin = currentUserRole === "super_admin";
 
@@ -144,7 +166,7 @@ export function UsersManagementPage({
   }
 
   const filtered = useMemo(() => {
-    let result = users;
+    let result = users.filter((u) => u.status !== "deleted");
 
     if (search) {
       const q = search.toLowerCase();
@@ -188,7 +210,12 @@ export function UsersManagementPage({
       if (res.ok) {
         toast.success(newStatus === "active" ? "Utilisateur activé" : "Utilisateur désactivé");
         router.refresh();
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error ?? "Erreur lors du changement de statut");
       }
+    } catch {
+      toast.error("Erreur réseau lors du changement de statut");
     } finally {
       setToggling(null);
     }
@@ -232,6 +259,35 @@ export function UsersManagementPage({
       setDeleting(false);
       setDeleteTarget(null);
     }
+  }
+
+  async function handleGetInviteLink(user: UserProfile) {
+    setLinkTarget(user);
+    setInviteLink(null);
+    setLinkLoading(true);
+    setLinkCopied(false);
+    try {
+      const res = await fetch(`/api/users/${user.id}/invite-link`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.inviteLink) {
+        setInviteLink(data.inviteLink);
+      } else {
+        toast.error(data.error ?? "Erreur lors de la récupération du lien");
+        setLinkTarget(null);
+      }
+    } catch {
+      toast.error("Erreur réseau");
+      setLinkTarget(null);
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
+  function handleCopyInviteLink() {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   }
 
   function canManageUser(u: UserProfile) {
@@ -342,13 +398,22 @@ export function UsersManagementPage({
                           >
                             <DotsThree size={16} weight="bold" />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="min-w-44">
                             {u.status !== "active" && (
                               <DropdownMenuItem
                                 disabled={toggling === u.id}
                                 onClick={() => handleSetStatus(u.id, "active")}
                               >
+                                <UserCheck size={16} weight="duotone" />
                                 Activer
+                              </DropdownMenuItem>
+                            )}
+                            {u.status === "pending" && (
+                              <DropdownMenuItem
+                                onClick={() => handleGetInviteLink(u)}
+                              >
+                                <LinkIcon size={16} weight="duotone" />
+                                Voir le lien d&apos;invitation
                               </DropdownMenuItem>
                             )}
                             {u.status === "active" && (
@@ -356,6 +421,7 @@ export function UsersManagementPage({
                                 disabled={toggling === u.id}
                                 onClick={() => handleSetStatus(u.id, "inactive")}
                               >
+                                <UserMinus size={16} weight="duotone" />
                                 Désactiver
                               </DropdownMenuItem>
                             )}
@@ -439,6 +505,45 @@ export function UsersManagementPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog lien d'invitation */}
+      <Dialog open={!!linkTarget} onOpenChange={(open) => { if (!open) { setLinkTarget(null); setInviteLink(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LinkIcon size={20} weight="duotone" />
+              Lien d&apos;invitation
+            </DialogTitle>
+            <DialogDescription>
+              Lien de connexion pour{" "}
+              <span className="font-medium text-foreground">
+                {linkTarget ? [linkTarget.first_name, linkTarget.last_name].filter(Boolean).join(" ") || linkTarget.email : ""}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          {linkLoading ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Chargement du lien...</p>
+          ) : inviteLink ? (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Lien à partager</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={inviteLink}
+                  className="text-xs font-mono"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <Button variant="outline" size="icon-sm" onClick={handleCopyInviteLink}>
+                  {linkCopied ? <Check size={14} weight="bold" /> : <Copy size={14} weight="bold" />}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button onClick={() => { setLinkTarget(null); setInviteLink(null); }}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

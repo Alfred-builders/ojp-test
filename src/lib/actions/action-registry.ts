@@ -38,7 +38,7 @@ export function getAvailableActions(params: {
 
   if (lot.type === "depot_vente") {
     addRachatActions(actions, lot, documents, now);
-    addDepotVenteActions(actions, lot);
+    addDepotVenteActions(actions, lot, documents);
   }
 
   if (lot.type === "vente") {
@@ -60,60 +60,7 @@ function addRachatActions(
 ) {
   const lotDocs = documents.filter((d) => d.lot_id === lot.id);
 
-  // ── Lot-level devis_envoye ──
-  if (lot.status === "devis_envoye") {
-    const devisDoc = lotDocs.find((d) => d.type === "devis_rachat");
-    actions.push({
-      id: "lot.accepter_devis",
-      label: devisDoc ? `Devis ${devisDoc.numero} en attente` : "Devis en attente",
-      description: "Devis de rachat en attente d'acceptation du client",
-      category: "document",
-      priority: "urgent",
-      icon: "FileText",
-      variant: "default",
-      scope: "lot",
-      documentId: devisDoc?.id,
-    });
-    actions.push({
-      id: "lot.refuser_devis",
-      label: "Refuser",
-      description: "Le client refuse le devis",
-      category: "document",
-      priority: "normal",
-      icon: "XCircle",
-      variant: "destructive",
-      scope: "lot",
-      documentId: devisDoc?.id,
-    });
-  }
-
-  // ── Lot-level en_retractation (disappears when delay expires) ──
-  if (lot.status === "en_retractation") {
-    const retractEnd = lot.date_fin_retractation
-      ? new Date(lot.date_fin_retractation)
-      : null;
-    const isExpired = retractEnd ? now >= retractEnd : false;
-
-    if (!isExpired) {
-      const contratDoc = lotDocs.find((d) => d.type === "contrat_rachat");
-      const remaining = retractEnd ? remainingTime(retractEnd, now) : "";
-      actions.push({
-        id: "lot.retracter",
-        label: contratDoc
-          ? `Contrat ${contratDoc.numero} — rétractation (${remaining})`
-          : `Rétractation en cours (${remaining})`,
-        description: "Le client peut exercer son droit de rétractation",
-        category: "document",
-        priority: "normal",
-        icon: "ArrowCounterClockwise",
-        variant: "destructive",
-        scope: "lot",
-        documentId: contratDoc?.id,
-      });
-    }
-  }
-
-  // ── Lot en_cours : references mixtes, actions derivees des documents ──
+  // ── Lot en_cours : actions dérivées des statuts des références ──
   if (lot.status === "en_cours") {
     const refsDevis = lot.references.filter(
       (r) => r.status === "devis_envoye"
@@ -123,8 +70,8 @@ function addRachatActions(
       actions.push({
         id: "lot.accepter_devis",
         label: devisDoc
-          ? `Devis ${devisDoc.numero} en attente (${refsDevis.length} réf.)`
-          : `Devis en attente (${refsDevis.length} réf.)`,
+          ? `Devis ${devisDoc.numero} | En attente de réponse client`
+          : "Devis | En attente de réponse client",
         description: "Devis de rachat en attente d'acceptation du client",
         category: "document",
         priority: "urgent",
@@ -152,29 +99,44 @@ function addRachatActions(
       (r) => r.status === "en_retractation"
     );
     if (refsRetract.length > 0) {
-      const contratDoc = lotDocs.find((d) => d.type === "contrat_rachat");
+      // Une action par contrat de rachat en attente
+      const contratDocs = lotDocs.filter((d) => d.type === "contrat_rachat" && d.status === "en_attente");
       const soonestEnd = refsRetract
         .filter((r) => r.date_fin_delai)
         .map((r) => new Date(r.date_fin_delai!))
         .sort((a, b) => a.getTime() - b.getTime())[0];
       const isExpired = soonestEnd ? now >= soonestEnd : false;
 
-      if (!isExpired && soonestEnd) {
-        const remaining = remainingTime(soonestEnd, now);
-        actions.push({
-          id: "lot.retracter",
-          label: contratDoc
-            ? `Contrat ${contratDoc.numero} — rétractation (${remaining})`
-            : `Rétractation en cours (${remaining})`,
-          description: `${refsRetract.length} référence${refsRetract.length > 1 ? "s" : ""} en rétractation`,
-          category: "document",
-          priority: "normal",
-          icon: "ArrowCounterClockwise",
-          variant: "destructive",
-          scope: "lot",
-          lotHref: lotHref(lot),
-          documentId: contratDoc?.id,
-        });
+      // Expired retractation is auto-processed server-side — only show during active delay
+      if (!isExpired) {
+        if (contratDocs.length > 0) {
+          for (const contrat of contratDocs) {
+            actions.push({
+              id: "lot.retracter",
+              label: `Contrat ${contrat.numero} | Délai de rétractation`,
+              description: `Contrat de rachat en attente de validation`,
+              category: "document",
+              priority: "normal",
+              icon: "ArrowCounterClockwise",
+              variant: "destructive",
+              scope: "lot",
+              lotHref: lotHref(lot),
+              documentId: contrat.id,
+            });
+          }
+        } else {
+          actions.push({
+            id: "lot.retracter",
+            label: "Contrat | Délai de rétractation",
+            description: `${refsRetract.length} référence${refsRetract.length > 1 ? "s" : ""} en rétractation`,
+            category: "document",
+            priority: "normal",
+            icon: "ArrowCounterClockwise",
+            variant: "destructive",
+            scope: "lot",
+            lotHref: lotHref(lot),
+          });
+        }
       }
     }
   }
@@ -184,8 +146,27 @@ function addRachatActions(
 
 function addDepotVenteActions(
   actions: LotAction[],
-  lot: LotWithReferences
+  lot: LotWithReferences,
+  documents: (DocumentRecord | DocumentWithRefs)[]
 ) {
+  // Contrat de dépôt-vente à signer
+  const contratDpv = documents.find(
+    (d) => d.type === "contrat_depot_vente" && d.status !== "signe" && d.status !== "annule"
+  );
+  if (contratDpv) {
+    actions.push({
+      id: "doc.signer_contrat_dpv",
+      label: "Contrat dépôt-vente | À faire signer",
+      description: "Le contrat de dépôt-vente doit être marqué comme signé",
+      category: "document",
+      priority: "normal",
+      icon: "FileText",
+      variant: "default",
+      scope: "lot",
+      documentId: contratDpv.id,
+    });
+  }
+
   const enDepotVente = lot.references.filter(
     (r) => r.status === "en_depot_vente"
   );
@@ -193,7 +174,7 @@ function addDepotVenteActions(
   if (enDepotVente.length > 0) {
     actions.push({
       id: "ref.restituer",
-      label: `Dépôt-vente — ${enDepotVente.length} article${enDepotVente.length > 1 ? "s" : ""} en cours`,
+      label: `Dépôt-vente | ${enDepotVente.length} article${enDepotVente.length > 1 ? "s" : ""} en boutique`,
       description: "Articles en dépôt-vente, possibilité de restituer",
       category: "transition",
       priority: "normal",
@@ -225,7 +206,7 @@ function addVenteActions(
   if (pendingFulfillment.length > 0) {
     actions.push({
       id: "vente.livrer",
-      label: `${pendingFulfillment.length} référence${pendingFulfillment.length > 1 ? "s" : ""} à commander`,
+      label: `${lot.numero} | ${pendingFulfillment.length} référence${pendingFulfillment.length > 1 ? "s" : ""} à commander`,
       description:
         "Références or investissement à dispatcher (stock ou fonderie)",
       category: "delivery",
@@ -233,7 +214,25 @@ function addVenteActions(
       icon: "Package",
       variant: "default",
       scope: "lot",
-      lotHref: `/commandes/${lot.id}`,
+      lotHref: `/fonderie/routage`,
+    });
+  }
+
+  // Articles prêts à livrer (servis du stock OU reçus de la fonderie) mais pas encore remis au client
+  const pretsALivrer = lotLignes.filter(
+    (l) => (l.fulfillment === "servi_stock" || l.fulfillment === "recu") && !l.is_livre
+  );
+  if (pretsALivrer.length > 0) {
+    actions.push({
+      id: "vente.livrer_stock" as const,
+      label: `${lot.numero} | ${pretsALivrer.length} article${pretsALivrer.length > 1 ? "s" : ""} à livrer au client`,
+      description: "Articles en attente de remise au client",
+      category: "delivery",
+      priority: "normal",
+      icon: "Handshake",
+      variant: "default",
+      scope: "lot",
+      lotHref: `/ventes/${lot.id}`,
     });
   }
 
@@ -244,18 +243,22 @@ function addVenteActions(
   );
   for (const bdc of bonsCommande) {
     if (!lotBdcIds.has(bdc.id)) continue;
-    if (bdc.statut === "paye" || bdc.statut === "annule") continue;
+    if (bdc.statut === "annule") continue;
+
+    // For paid BDCs: check if delivery to client is pending
+    // BDC payé : livraison client gérée par vente.livrer_stock (qui couvre recu + servi_stock)
+    if (bdc.statut === "paye") continue;
 
     let label = "";
     let priority: "urgent" | "normal" | "info" = "normal";
 
     if (bdc.statut === "brouillon") {
-      label = `BdC ${bdc.numero} — à envoyer`;
+      label = `Bon de commande ${bdc.numero} | À envoyer`;
     } else if (bdc.statut === "envoye") {
-      label = `BdC ${bdc.numero} — en attente de réception`;
+      label = `Bon de commande ${bdc.numero} | En attente de réception`;
       priority = "info";
     } else if (bdc.statut === "recu") {
-      label = `BdC ${bdc.numero} — reçu, paiement fonderie à faire`;
+      label = `Bon de commande ${bdc.numero} | Paiement fonderie à effectuer`;
       priority = "urgent";
     }
 
@@ -269,7 +272,7 @@ function addVenteActions(
         icon: "Package",
         variant: "secondary",
         scope: "payment",
-        lotHref: `/commandes/bdc/${bdc.id}`,
+        lotHref: `/fonderie/suivi/bdc/${bdc.id}`,
       });
     }
   }
@@ -287,7 +290,7 @@ function addPaymentActions(
 
     actions.push({
       id: `payment.${payment.type}` as LotAction["id"],
-      label: `Paiement à faire — ${payment.label}`,
+      label: payment.label,
       description: `Restant : ${formatEur(payment.montant_restant)}`,
       category: "payment",
       priority: "urgent",

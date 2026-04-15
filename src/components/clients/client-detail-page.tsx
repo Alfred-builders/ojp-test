@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { Header } from "@/components/dashboard/header";
 import { clientSchema, LEAD_SOURCE_OPTIONS } from "@/lib/validations/client";
+import { CountrySelect } from "@/components/ui/country-select";
 import { IdentityDocumentSection } from "@/components/clients/identity-document-form";
 import type { Client, ClientIdentityDocument } from "@/types/client";
 import type { Dossier } from "@/types/dossier";
@@ -109,6 +110,11 @@ export function ClientDetailPage({
   const { openPreview } = usePreviewDrawer();
   const [saving, setSaving] = useState(false);
   const [creatingDossier, setCreatingDossier] = useState(false);
+
+  const hasExpiredDocument = identityDocuments.length > 0 && identityDocuments.every(
+    (doc) => doc.expiry_date && new Date(doc.expiry_date) < new Date()
+  );
+  const canCreateDossier = identityDocuments.length > 0 && !hasExpiredDocument;
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [civility, setCivility] = useState(client.civility);
@@ -208,10 +214,26 @@ export function ClientDetailPage({
 
   const displayName = `${client.civility === "M" ? "M." : "Mme"} ${client.first_name} ${client.last_name}`;
 
+  const titleWithBadge = (
+    <span className="flex items-center gap-2">
+      {displayName}
+      <Badge
+        variant="secondary"
+        className={
+          client.is_valid
+            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+            : "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30"
+        }
+      >
+        {client.is_valid ? "Valide" : "Non valide"}
+      </Badge>
+    </span>
+  );
+
   return (
     <>
       <Header
-        title={displayName}
+        title={titleWithBadge}
         backAction={
           <Button variant="ghost" size="icon-sm" aria-label="Retour" onClick={() => router.back()}>
             <ArrowLeft size={16} weight="regular" />
@@ -294,7 +316,14 @@ export function ClientDetailPage({
               <DetailRow label="Adresse" value={client.address ?? "—"} editing={editing} editValue={address} onEditChange={setAddress} />
               <DetailRow label="Code postal" value={client.postal_code ?? "—"} editing={editing} editValue={postalCode} onEditChange={setPostalCode} />
               <DetailRow label="Ville" value={client.city ?? "—"} editing={editing} editValue={city} onEditChange={setCity} />
-              <DetailRow label="Pays" value={client.country ?? "—"} editing={editing} editValue={country} onEditChange={setCountry} />
+              <DetailRow
+                label="Pays"
+                value={client.country ?? "—"}
+                editing={editing}
+                editContent={
+                  <CountrySelect value={country} onValueChange={setCountry} />
+                }
+              />
             </CardContent>
           </Card>
 
@@ -316,12 +345,12 @@ export function ClientDetailPage({
 
           {/* Dossiers du client */}
           <div className="md:col-span-3 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-b pb-3">
               <h3 className="flex items-center gap-2 font-semibold">
                 <PhFolderOpen size={20} weight="duotone" />
                 Dossiers
               </h3>
-              {identityDocuments.length > 0 ? (
+              {canCreateDossier ? (
                 <Button variant="secondary" size="sm" disabled={creatingDossier} onClick={handleCreateDossier}>
                   <Plus size={14} weight="bold" />
                   {creatingDossier ? "Création..." : "Créer un dossier"}
@@ -337,7 +366,9 @@ export function ClientDetailPage({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Ajoutez une pièce d&apos;identité pour créer un dossier
+                    {identityDocuments.length === 0
+                      ? "Ajoutez une pièce d'identité pour créer un dossier"
+                      : "La pièce d'identité du client est expirée"}
                   </TooltipContent>
                 </Tooltip>
               )}

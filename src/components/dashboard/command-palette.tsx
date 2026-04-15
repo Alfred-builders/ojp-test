@@ -10,6 +10,7 @@ import {
   Storefront,
   Diamond,
   Coins,
+  HandCoins,
   CircleNotch,
   Plus,
   SquaresFour,
@@ -26,6 +27,7 @@ const ENTITY_ICONS: Record<SearchResult["entity_type"], typeof UsersThree> = {
   lot: ShoppingCart,
   vente: Storefront,
   bijoux: Diamond,
+  confie_achat: HandCoins,
   or_investissement: Coins,
 };
 
@@ -35,6 +37,7 @@ const ENTITY_ORDER: SearchResult["entity_type"][] = [
   "lot",
   "vente",
   "bijoux",
+  "confie_achat",
   "or_investissement",
 ];
 
@@ -54,6 +57,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   { id: "nav-dashboard", label: "Aller au tableau de bord", url: "/dashboard", icon: SquaresFour, shortcut: "Alt+D", group: "navigation" },
   { id: "nav-lots", label: "Aller aux lots", url: "/lots", icon: ShoppingCart, shortcut: "Alt+L", group: "navigation" },
   { id: "nav-stock", label: "Aller au stock", url: "/stock", icon: Diamond, shortcut: "Alt+S", group: "navigation" },
+  { id: "nav-confie-achat", label: "Aller au confié d'achat", url: "/confie-achat", icon: HandCoins, group: "navigation" },
   { id: "nav-ventes", label: "Aller aux ventes", url: "/ventes", icon: Storefront, shortcut: "Alt+V", group: "navigation" },
   { id: "nav-clients", label: "Aller aux clients", url: "/clients", icon: UsersThree, shortcut: "Alt+C", group: "navigation" },
   { id: "nav-dossiers", label: "Aller aux dossiers", url: "/dossiers", icon: FolderOpen, group: "navigation" },

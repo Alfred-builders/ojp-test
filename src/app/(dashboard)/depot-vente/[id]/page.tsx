@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { autoProcessExpiredRetractation } from "@/lib/actions/finalize-actions";
 import { LotDetailPage } from "@/components/lots/lot-detail-page";
 import type { LotWithReferences, LotReference } from "@/types/lot";
 import type { DocumentRecord } from "@/types/document";
@@ -18,6 +19,8 @@ export default async function DepotVenteDetailPage({ params }: { params: Promise
 
   if (!lot) return notFound();
 
+  await autoProcessExpiredRetractation(lot.dossier_id);
+
   const { data: references } = await supabase
     .from("lot_references")
     .select("*")
@@ -26,7 +29,7 @@ export default async function DepotVenteDetailPage({ params }: { params: Promise
 
   const { data: documents } = await supabase
     .from("documents")
-    .select("*")
+    .select("*, document_references(id, document_id, lot_reference_id)")
     .eq("lot_id", id)
     .order("created_at", { ascending: false });
 

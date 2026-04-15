@@ -7,11 +7,13 @@ import {
   Package,
   Coins,
   Factory,
+  Plus,
+  Trash,
+  ArrowsLeftRight,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "@/lib/supabase/mutation";
-import { DOSSIER_WITH_CLIENT } from "@/lib/supabase/queries";
-import { generateDocument } from "@/lib/pdf/pdf-actions";
+import { createBonsCommande } from "@/lib/fonderie/create-bon-commande";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,14 +43,17 @@ import {
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import type { CommandeLigneFlat } from "@/types/commande";
 import type { Fonderie } from "@/types/fonderie";
-import { formatCurrency, formatDate, formatTime } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
+import { FULFILLMENT_BADGE } from "@/lib/fonderie/status-config";
 import type { FulfillmentStatus } from "@/types/vente";
 
-const FULFILLMENT_BADGE: Record<string, { label: string; className: string }> = {
-  commande: { label: "Commandé", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  servi_stock: { label: "Servi stock", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  recu: { label: "Reçu", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-};
+// ── Dispatch types ──
+
+interface DispatchEntry {
+  type: "stock" | "fonderie";
+  fonderie_id?: string;
+  quantite: number;
+}
 
 interface CommandeRefTableProps {
   data: CommandeLigneFlat[];
@@ -60,28 +65,22 @@ export function CommandeRefTable({ data: initialData, fonderies, onGenerateReady
   const router = useRouter();
   const [data, setData] = useState(initialData);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
 
-  // Sync with parent prop when it changes
   useEffect(() => { setData(initialData); }, [initialData]);
 
-  // Fonderie assignments: ligne.id → fonderie_id
-  const [fonderieAssignments, setFonderieAssignments] = useState<Record<string, string>>({});
+  // Dispatch assignments: ligne.id → DispatchEntry[]
+  const [dispatches, setDispatches] = useState<Record<string, DispatchEntry[]>>({});
 
-  // Split dialog state
-  const [splitLigne, setSplitLigne] = useState<CommandeLigneFlat | null>(null);
-  const [splitQty, setSplitQty] = useState(0);
+  // Dispatch dialog state
+  const [dialogLigne, setDialogLigne] = useState<CommandeLigneFlat | null>(null);
+  const [dialogEntries, setDialogEntries] = useState<DispatchEntry[]>([]);
 
   const pendingLines = useMemo(() =>
     data.filter((l) => l.fulfillment === "pending" || l.fulfillment === "a_commander"),
-    [data]
-  );
-  const processedLines = useMemo(() =>
-    data.filter((l) => l.fulfillment !== "pending" && l.fulfillment !== "a_commander"),
-    [data]
+    [data],
   );
 
   const filtered = useMemo(() => {
@@ -91,236 +90,220 @@ export function CommandeRefTable({ data: initialData, fonderies, onGenerateReady
       (item) =>
         item.designation.toLowerCase().includes(q) ||
         item.client_name.toLowerCase().includes(q) ||
-        item.lot_numero.toLowerCase().includes(q)
+        item.lot_numero.toLowerCase().includes(q),
     );
   }, [pendingLines, search]);
 
   const totalItems = filtered.length;
   const paginatedData = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
-  // Count unique fonderies assigned
-  const uniqueFonderies = new Set(Object.values(fonderieAssignments).filter(Boolean));
-  const hasFonderieAssignments = uniqueFonderies.size > 0;
+  // Has any dispatch assigned?
+  const hasDispatches = Object.values(dispatches).some((entries) => entries.length > 0);
 
-  // Sync generate state to parent
+  // Sync dispatch state to parent
   useEffect(() => {
     onGenerateReady(
-      hasFonderieAssignments ? handleGenerateBDC : null,
-      hasFonderieAssignments,
-      uniqueFonderies.size,
-      generating
+      hasDispatches ? handleDispatch : null,
+      hasDispatches,
+      0,
+      generating,
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasFonderieAssignments, uniqueFonderies.size, generating, fonderieAssignments]);
+  }, [hasDispatches, generating, dispatches]);
 
-  // --- Stock handling ---
-  async function handleServeStock(ligne: CommandeLigneFlat) {
-    if (ligne.stock_disponible <= 0) return;
+  const fonderieMap = Object.fromEntries(fonderies.map((f) => [f.id, f.nom]));
 
-    if (ligne.stock_disponible < ligne.quantite) {
-      // Partial stock → open split dialog
-      setSplitLigne(ligne);
-      setSplitQty(ligne.stock_disponible);
-      return;
-    }
+  // ── Dialog helpers ──
 
-    // Full stock
-    setLoading(ligne.id);
-    try {
-      const supabase = createClient();
-      const { error } = await mutate(
-        supabase.from("vente_lignes").update({ fulfillment: "servi_stock" as FulfillmentStatus }).eq("id", ligne.id),
-        "Erreur lors de la mise à jour du fulfillment",
-        "Référence servie"
-      );
-      if (error) return;
-      if (ligne.or_investissement_id) {
-        const { error: rpcErr } = await mutate(
-          supabase.rpc("increment_or_invest_quantite", { p_id: ligne.or_investissement_id, p_qty: -ligne.quantite }),
-          "Erreur lors de la mise à jour du stock",
-          "Référence servie"
-        );
-        if (rpcErr) return;
+  function openDispatchDialog(ligne: CommandeLigneFlat) {
+    setDialogLigne(ligne);
+    const existing = dispatches[ligne.id];
+    if (existing && existing.length > 0) {
+      setDialogEntries(existing.map((e) => ({ ...e })));
+    } else {
+      // Default: stock row if available
+      const entries: DispatchEntry[] = [];
+      if (ligne.stock_disponible > 0) {
+        entries.push({ type: "stock", quantite: Math.min(ligne.stock_disponible, ligne.quantite) });
       }
-      setData((prev) => prev.map((l) => l.id === ligne.id ? { ...l, fulfillment: "servi_stock" } : l));
-      router.refresh();
-    } catch (err) {
-      console.error("Erreur lors du service depuis le stock:", err);
-    } finally {
-      setLoading(null);
+      setDialogEntries(entries);
     }
   }
 
-  async function handleSplitConfirm() {
-    if (!splitLigne || splitQty <= 0) return;
-    setLoading(splitLigne.id);
-    try {
-      const supabase = createClient();
-      const remaining = splitLigne.quantite - splitQty;
-
-      // Update original line: reduce qty and serve from stock
-      const newPrixTotal = splitLigne.prix_unitaire * splitQty;
-      const { error: updateErr } = await mutate(
-        supabase.from("vente_lignes").update({
-          quantite: splitQty,
-          prix_total: newPrixTotal,
-          fulfillment: "servi_stock" as FulfillmentStatus,
-        }).eq("id", splitLigne.id),
-        "Erreur lors de la mise à jour de la ligne",
-        "Référence servie"
-      );
-      if (updateErr) return;
-
-      // Decrement stock
-      if (splitLigne.or_investissement_id) {
-        const { error: rpcErr } = await mutate(
-          supabase.rpc("increment_or_invest_quantite", { p_id: splitLigne.or_investissement_id, p_qty: -splitQty }),
-          "Erreur lors de la mise à jour du stock",
-          "Référence servie"
-        );
-        if (rpcErr) return;
-      }
-
-      // Create new line for the remainder
-      const remainingTotal = splitLigne.prix_unitaire * remaining;
-      const { error: insertErr } = await mutate(
-        supabase.from("vente_lignes").insert({
-          lot_id: splitLigne.lot_id,
-          or_investissement_id: splitLigne.or_investissement_id,
-          designation: splitLigne.designation,
-          metal: splitLigne.metal,
-          qualite: null,
-          poids: splitLigne.poids,
-          quantite: remaining,
-          prix_unitaire: splitLigne.prix_unitaire,
-          prix_total: remainingTotal,
-          fulfillment: "pending",
-        }),
-        "Erreur lors de la création de la ligne restante",
-        "Référence servie"
-      );
-      if (insertErr) return;
-
-      setSplitLigne(null);
-      router.refresh();
-    } catch (err) {
-      console.error("Erreur lors du split de ligne:", err);
-    } finally {
-      setLoading(null);
-    }
+  function addFonderieRow() {
+    setDialogEntries((prev) => [...prev, { type: "fonderie", fonderie_id: undefined, quantite: 0 }]);
   }
 
-  // --- Fonderie assignment ---
-  function handleAssignFonderie(ligneId: string, fonderieId: string) {
-    setFonderieAssignments((prev) => ({ ...prev, [ligneId]: fonderieId }));
+  function updateEntry(index: number, patch: Partial<DispatchEntry>) {
+    setDialogEntries((prev) => prev.map((e, i) => i === index ? { ...e, ...patch } : e));
   }
 
-  // --- Generate BDC ---
-  async function handleGenerateBDC() {
-    if (!hasFonderieAssignments) return;
+  function removeEntry(index: number) {
+    setDialogEntries((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function confirmDispatchDialog() {
+    if (!dialogLigne) return;
+    const valid = dialogEntries.filter((e) => e.quantite > 0 && (e.type === "stock" || e.fonderie_id));
+    setDispatches((prev) => ({ ...prev, [dialogLigne.id]: valid }));
+    setDialogLigne(null);
+  }
+
+  function clearDispatch(ligneId: string) {
+    setDispatches((prev) => {
+      const next = { ...prev };
+      delete next[ligneId];
+      return next;
+    });
+  }
+
+  // ── Dispatch validation ──
+
+  const dialogTotal = dialogEntries.reduce((sum, e) => sum + e.quantite, 0);
+  const dialogMax = dialogLigne?.quantite ?? 0;
+  const dialogStockMax = Math.min(dialogLigne?.stock_disponible ?? 0, dialogMax);
+  const dialogValid = dialogTotal === dialogMax && dialogEntries.every((e) => e.quantite > 0 && (e.type === "stock" || e.fonderie_id));
+  const hasStockRow = dialogEntries.some((e) => e.type === "stock");
+
+  // ── Execute dispatch ──
+
+  async function handleDispatch() {
+    if (!hasDispatches) return;
     setGenerating(true);
     const supabase = createClient();
 
-    const groups = new Map<string, CommandeLigneFlat[]>();
-    for (const [ligneId, fonderieId] of Object.entries(fonderieAssignments)) {
+    // Group fonderie dispatches across all lines
+    const fonderieGroups = new Map<string, CommandeLigneFlat[]>();
+
+    for (const [ligneId, entries] of Object.entries(dispatches)) {
       const ligne = data.find((l) => l.id === ligneId);
       if (!ligne) continue;
-      const existing = groups.get(fonderieId) ?? [];
-      existing.push(ligne);
-      groups.set(fonderieId, existing);
-    }
 
-    for (const [fonderieId, lignes] of groups) {
-      const fonderie = fonderies.find((f) => f.id === fonderieId);
-      if (!fonderie) continue;
+      const stockEntry = entries.find((e) => e.type === "stock");
+      const fonderieEntries = entries.filter((e) => e.type === "fonderie" && e.fonderie_id);
 
-      const { data: bdc, error: bdcErr } = await mutate(
-        supabase
-          .from("bons_commande")
-          .insert({ fonderie_id: fonderieId, numero: "" })
-          .select()
-          .single(),
-        "Erreur lors de la création du bon de commande",
-        "Référence servie"
-      );
-
-      if (bdcErr || !bdc) break;
-
-      const ligneIds = lignes.map((l) => l.id);
-      const { error: updateErr } = await mutate(
-        supabase.from("vente_lignes").update({
-          bon_commande_id: bdc.id,
-          fonderie_id: fonderieId,
-          fulfillment: "commande" as FulfillmentStatus,
-        }).in("id", ligneIds),
-        "Erreur lors de la mise à jour des lignes de commande",
-        "Référence servie"
-      );
-      if (updateErr) break;
-
-      // Generate PDF
-      const firstLigne = lignes[0];
-      const { data: lotData } = await supabase
-        .from("lots")
-        .select(`id, numero, ${DOSSIER_WITH_CLIENT}`)
-        .eq("id", firstLigne.lot_id)
-        .single();
-
-      if (lotData) {
-        const dossier = Array.isArray(lotData.dossier) ? lotData.dossier[0] : lotData.dossier;
-        const client = dossier?.client ? (Array.isArray(dossier.client) ? dossier.client[0] : dossier.client) : null;
-        const now = new Date();
-        const dateStr = formatDate(now.toISOString());
-
-        await generateDocument({
-          type: "bon_commande",
-          lotId: lotData.id,
-          dossierId: dossier?.id ?? "",
-          clientId: client?.id ?? "",
-          client: {
-            civilite: client?.civility === "M" ? "M." : "Mme",
-            nom: client?.last_name ?? "",
-            prenom: client?.first_name ?? "",
-          },
-          dossier: {
-            numeroDossier: dossier?.numero ?? "",
-            numeroLot: lotData.numero,
-            date: dateStr,
-            heure: formatTime(now),
-          },
-          references: [],
-          totaux: { totalBrut: 0, taxe: 0, netAPayer: 0 },
-          fonderie: {
-            nom: fonderie.nom,
-            adresse: fonderie.adresse ?? undefined,
-            codePostal: fonderie.code_postal ?? undefined,
-            ville: fonderie.ville ?? undefined,
-            telephone: fonderie.telephone ?? undefined,
-            email: fonderie.email ?? undefined,
-          },
-          bonCommandeLignes: lignes.map((l) => ({
-            designation: l.designation,
-            metal: l.metal ?? "Or",
-            poids: l.poids ?? 0,
-            quantite: l.quantite,
-            prixUnitaire: l.prix_unitaire,
-            total: l.prix_total,
-          })),
-          bonCommandeTotalHT: lignes.reduce((sum, l) => sum + l.prix_total, 0),
-        });
+      if (stockEntry && stockEntry.quantite > 0) {
+        if (stockEntry.quantite >= ligne.quantite && fonderieEntries.length === 0) {
+          // Full stock
+          await mutate(
+            supabase.from("vente_lignes").update({ fulfillment: "servi_stock" as FulfillmentStatus }).eq("id", ligneId),
+            "Erreur", "Référence servie",
+          );
+          if (ligne.or_investissement_id) {
+            await mutate(
+              supabase.rpc("increment_or_invest_quantite", { p_id: ligne.or_investissement_id, p_qty: -stockEntry.quantite }),
+              "Erreur stock", "Stock mis à jour",
+            );
+          }
+        } else {
+          // Partial stock → split: update original line for stock portion
+          await mutate(
+            supabase.from("vente_lignes").update({
+              quantite: stockEntry.quantite,
+              prix_total: ligne.prix_unitaire * stockEntry.quantite,
+              fulfillment: "servi_stock" as FulfillmentStatus,
+            }).eq("id", ligneId),
+            "Erreur", "Référence servie",
+          );
+          if (ligne.or_investissement_id) {
+            await mutate(
+              supabase.rpc("increment_or_invest_quantite", { p_id: ligne.or_investissement_id, p_qty: -stockEntry.quantite }),
+              "Erreur stock", "Stock mis à jour",
+            );
+          }
+          // Create new lines for each fonderie portion
+          for (const fe of fonderieEntries) {
+            if (!fe.fonderie_id || fe.quantite <= 0) continue;
+            const { data: newLigne } = await supabase.from("vente_lignes").insert({
+              lot_id: ligne.lot_id,
+              or_investissement_id: ligne.or_investissement_id,
+              designation: ligne.designation,
+              metal: ligne.metal,
+              qualite: null,
+              poids: ligne.poids,
+              quantite: fe.quantite,
+              prix_unitaire: ligne.prix_unitaire,
+              prix_total: ligne.prix_unitaire * fe.quantite,
+              fulfillment: "pending",
+              fonderie_id: fe.fonderie_id,
+            }).select().single();
+            // Add to fonderie group for BDC creation
+            if (newLigne) {
+              const group = fonderieGroups.get(fe.fonderie_id) ?? [];
+              group.push({ ...ligne, id: newLigne.id, quantite: fe.quantite, prix_total: ligne.prix_unitaire * fe.quantite });
+              fonderieGroups.set(fe.fonderie_id, group);
+            }
+          }
+        }
+      } else {
+        // No stock, only fonderie entries
+        if (fonderieEntries.length === 1 && fonderieEntries[0].quantite === ligne.quantite) {
+          // Single fonderie, full qty → add to group directly
+          const fe = fonderieEntries[0];
+          const group = fonderieGroups.get(fe.fonderie_id!) ?? [];
+          group.push(ligne);
+          fonderieGroups.set(fe.fonderie_id!, group);
+        } else {
+          // Multiple fonderies → split into separate lines
+          let isFirst = true;
+          for (const fe of fonderieEntries) {
+            if (!fe.fonderie_id || fe.quantite <= 0) continue;
+            if (isFirst) {
+              // Reuse original line
+              await supabase.from("vente_lignes").update({
+                quantite: fe.quantite,
+                prix_total: ligne.prix_unitaire * fe.quantite,
+                fonderie_id: fe.fonderie_id,
+              }).eq("id", ligneId);
+              const group = fonderieGroups.get(fe.fonderie_id) ?? [];
+              group.push({ ...ligne, quantite: fe.quantite, prix_total: ligne.prix_unitaire * fe.quantite });
+              fonderieGroups.set(fe.fonderie_id, group);
+              isFirst = false;
+            } else {
+              const { data: newLigne } = await supabase.from("vente_lignes").insert({
+                lot_id: ligne.lot_id,
+                or_investissement_id: ligne.or_investissement_id,
+                designation: ligne.designation,
+                metal: ligne.metal,
+                qualite: null,
+                poids: ligne.poids,
+                quantite: fe.quantite,
+                prix_unitaire: ligne.prix_unitaire,
+                prix_total: ligne.prix_unitaire * fe.quantite,
+                fulfillment: "pending",
+                fonderie_id: fe.fonderie_id,
+              }).select().single();
+              if (newLigne) {
+                const group = fonderieGroups.get(fe.fonderie_id) ?? [];
+                group.push({ ...ligne, id: newLigne.id, quantite: fe.quantite, prix_total: ligne.prix_unitaire * fe.quantite });
+                fonderieGroups.set(fe.fonderie_id, group);
+              }
+            }
+          }
+        }
       }
     }
 
-    // Update local state: mark processed lines as "commande"
-    const processedIds = new Set(Object.keys(fonderieAssignments));
-    setData((prev) => prev.map((l) => processedIds.has(l.id) ? { ...l, fulfillment: "commande" } : l));
+    // Create BDCs for fonderie groups
+    if (fonderieGroups.size > 0) {
+      await createBonsCommande({ groups: fonderieGroups, fonderies });
+    }
 
-    setFonderieAssignments({});
+    setDispatches({});
     setGenerating(false);
     router.refresh();
   }
 
-  const fonderieMap = Object.fromEntries(fonderies.map((f) => [f.id, f.nom]));
+  // ── Dispatch summary for a line ──
+
+  function getDispatchSummary(ligneId: string): string[] {
+    const entries = dispatches[ligneId];
+    if (!entries || entries.length === 0) return [];
+    return entries.map((e) => {
+      if (e.type === "stock") return `Stock ×${e.quantite}`;
+      return `${e.fonderie_id ? fonderieMap[e.fonderie_id] ?? "Fonderie" : "?"} ×${e.quantite}`;
+    });
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 gap-4">
@@ -336,7 +319,7 @@ export function CommandeRefTable({ data: initialData, fonderies, onGenerateReady
       </div>
 
       {/* Table */}
-      <div className="min-h-0 max-h-[60vh] overflow-auto rounded-lg border bg-white dark:bg-card">
+      <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-white dark:bg-card">
         <Table className={paginatedData.length === 0 ? "h-full" : ""}>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow className="bg-transparent hover:bg-transparent">
@@ -349,118 +332,73 @@ export function CommandeRefTable({ data: initialData, fonderies, onGenerateReady
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.length === 0 && processedLines.length === 0 ? (
+            {paginatedData.length === 0 ? (
               <TableRow className="hover:bg-transparent h-full">
                 <TableCell colSpan={6} className="text-center align-middle text-muted-foreground">
                   <Package size={32} weight="duotone" className="mx-auto mb-2 opacity-40" />
-                  Aucune ligne en attente de commande.
+                  Aucune ligne en attente de dispatch.
                 </TableCell>
               </TableRow>
             ) : (
-              <>
-                {paginatedData.map((ligne) => {
-                  const isLoading = loading === ligne.id;
-                  const hasStock = ligne.stock_disponible > 0;
-                  const assigned = fonderieAssignments[ligne.id];
+              paginatedData.map((ligne) => {
+                const summary = getDispatchSummary(ligne.id);
+                const hasDispatch = summary.length > 0;
+                const hasStock = ligne.stock_disponible > 0;
 
-                  return (
-                    <TableRow key={ligne.id} className="bg-white dark:bg-card">
-                      <TableCell className="pl-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                            <Coins size={16} weight="duotone" className="text-muted-foreground" />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium">{ligne.designation}</span>
-                            <p className="text-xs text-muted-foreground">
-                              {ligne.metal ?? ""} {ligne.poids ? `· ${ligne.poids}g` : ""}
-                            </p>
-                          </div>
+                return (
+                  <TableRow key={ligne.id} className="bg-white dark:bg-card">
+                    <TableCell className="pl-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                          <Coins size={16} weight="duotone" className="text-muted-foreground" />
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{ligne.lot_numero}</span>
-                        <p className="text-xs text-muted-foreground">{ligne.client_name}</p>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">×{ligne.quantite}</TableCell>
-                      <TableCell className="text-right text-sm font-medium">{formatCurrency(ligne.prix_total)}</TableCell>
-                      <TableCell className="text-right">
-                        <span className={`text-sm font-medium ${hasStock ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
-                          {ligne.stock_disponible}
-                        </span>
-                      </TableCell>
-                      <TableCell className="pr-4">
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!hasStock || isLoading}
-                            onClick={() => handleServeStock(ligne)}
-                            className="shrink-0"
-                          >
-                            <Package size={14} weight="duotone" />
-                            Ajouter du stock
+                        <div>
+                          <span className="text-sm font-medium">{ligne.designation}</span>
+                          <p className="text-xs text-muted-foreground">
+                            {ligne.metal ?? ""} {ligne.poids ? `· ${ligne.poids}g` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{ligne.lot_numero}</span>
+                      <p className="text-xs text-muted-foreground">{ligne.client_name}</p>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">×{ligne.quantite}</TableCell>
+                    <TableCell className="text-right text-sm font-medium">{formatCurrency(ligne.prix_total)}</TableCell>
+                    <TableCell className="text-right">
+                      <span className={`text-sm font-medium ${hasStock ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+                        {ligne.stock_disponible}
+                      </span>
+                    </TableCell>
+                    <TableCell className="pr-4">
+                      {hasDispatch ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {summary.map((s, i) => (
+                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0.5 cursor-pointer" onClick={() => openDispatchDialog(ligne)}>
+                              {s}
+                            </Badge>
+                          ))}
+                          <Button size="icon-sm" variant="ghost" className="h-5 w-5" onClick={() => clearDispatch(ligne.id)}>
+                            <Trash size={12} weight="regular" className="text-muted-foreground" />
                           </Button>
-                          <Select
-                            value={assigned ?? ""}
-                            onValueChange={(v) => { if (v) handleAssignFonderie(ligne.id, String(v)); }}
-                          >
-                            <SelectTrigger className="h-7 w-full text-[0.8rem] font-medium !border-border !bg-background hover:!bg-muted !text-foreground dark:!border-input dark:!bg-input/30 dark:hover:!bg-input/50">
-                              <Factory size={14} weight="duotone" />
-                              {assigned ? fonderieMap[assigned] ?? "Fonderie" : "Commander en fonderie"}
-                            </SelectTrigger>
-                            <SelectContent className="min-w-[200px]">
-                              {fonderies.map((f) => (
-                                <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-
-                {/* Processed lines (greyed out) */}
-                {processedLines.map((ligne) => {
-                  const badge = FULFILLMENT_BADGE[ligne.fulfillment];
-                  return (
-                    <TableRow key={ligne.id} className="bg-white opacity-50 dark:bg-card">
-                      <TableCell className="pl-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                            <Coins size={14} weight="duotone" className="text-muted-foreground" />
-                          </div>
-                          <span className="text-sm">{ligne.designation}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{ligne.lot_numero}</span>
-                        <p className="text-xs text-muted-foreground">{ligne.client_name}</p>
-                      </TableCell>
-                      <TableCell className="text-right">×{ligne.quantite}</TableCell>
-                      <TableCell className="text-right text-sm">{formatCurrency(ligne.prix_total)}</TableCell>
-                      <TableCell className="text-right">{ligne.stock_disponible}</TableCell>
-                      <TableCell className="pr-4">
-                        {badge && (
-                          <Badge variant="secondary" className={badge.className}>
-                            {badge.label}
-                            {ligne.fulfillment === "commande" && ligne.fonderie_id && fonderieMap[ligne.fonderie_id]
-                              ? ` — ${fonderieMap[ligne.fonderie_id]}`
-                              : ""}
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={() => openDispatchDialog(ligne)}>
+                          <ArrowsLeftRight size={14} weight="duotone" />
+                          Dispatcher
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
 
-      {totalItems > pageSize && (
+      <div className="shrink-0">
         <DataTablePagination
           totalItems={totalItems}
           pageSize={pageSize}
@@ -468,48 +406,100 @@ export function CommandeRefTable({ data: initialData, fonderies, onGenerateReady
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
-      )}
+      </div>
 
-      {/* Split dialog */}
-      <Dialog open={!!splitLigne} onOpenChange={(open) => { if (!open) setSplitLigne(null); }}>
-        <DialogContent>
+      {/* Dispatch dialog */}
+      <Dialog open={!!dialogLigne} onOpenChange={(open) => { if (!open) setDialogLigne(null); }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Servir partiellement depuis le stock</DialogTitle>
+            <DialogTitle>Dispatcher — {dialogLigne?.designation}</DialogTitle>
             <DialogDescription>
-              Stock disponible : <strong>{splitLigne?.stock_disponible}</strong> — Quantité demandée : <strong>{splitLigne?.quantite}</strong>
+              Quantité à dispatcher : <strong>{dialogMax}</strong>
+              {dialogLigne && dialogLigne.stock_disponible > 0 && (
+                <> · Stock disponible : <strong>{dialogLigne.stock_disponible}</strong></>
+              )}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Combien de pièces servir depuis le stock ? Le reste sera à commander en fonderie.
-            </p>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">Servir :</span>
-              <Input
-                type="number"
-                min={1}
-                max={splitLigne?.stock_disponible ?? 0}
-                value={splitQty}
-                onChange={(e) => setSplitQty(Math.min(Number(e.target.value), splitLigne?.stock_disponible ?? 0))}
-                className="w-24"
-              />
-              <span className="text-sm text-muted-foreground">sur {splitLigne?.quantite}</span>
+
+          <div className="space-y-3 py-2">
+            {dialogEntries.map((entry, i) => {
+              const othersTotal = dialogEntries.reduce((sum, e, j) => j === i ? sum : sum + e.quantite, 0);
+              const remaining = dialogMax - othersTotal;
+              const maxForEntry = entry.type === "stock" ? Math.min(remaining, dialogStockMax) : remaining;
+
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  {entry.type === "stock" ? (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted">
+                        <Package size={14} weight="duotone" className="text-foreground" />
+                      </div>
+                      <span className="text-sm font-medium">Stock</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted">
+                        <Factory size={14} weight="duotone" className="text-foreground" />
+                      </div>
+                      <Select
+                        value={entry.fonderie_id ?? ""}
+                        onValueChange={(v) => { if (v) updateEntry(i, { fonderie_id: v }); }}
+                      >
+                        <SelectTrigger className="h-7 flex-1 text-xs">
+                          <span className="truncate">
+                            {entry.fonderie_id ? fonderieMap[entry.fonderie_id] ?? "Fonderie" : "Fonderie..."}
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fonderies.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <Input
+                    type="number"
+                    min={0}
+                    max={maxForEntry}
+                    value={entry.quantite || ""}
+                    onChange={(e) => updateEntry(i, { quantite: Math.min(Math.max(0, Number(e.target.value)), maxForEntry) })}
+                    className="w-20 h-7 text-center"
+                  />
+                  <Button size="icon-sm" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => removeEntry(i)}>
+                    <Trash size={14} weight="regular" className="text-muted-foreground" />
+                  </Button>
+                </div>
+              );
+            })}
+
+            {/* Add buttons */}
+            <div className="flex items-center gap-2 pt-1">
+              {!hasStockRow && dialogLigne && dialogLigne.stock_disponible > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setDialogEntries((prev) => [{ type: "stock", quantite: 0 }, ...prev])}>
+                  <Package size={14} weight="duotone" />
+                  Stock
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={addFonderieRow}>
+                <Plus size={14} weight="bold" />
+                Fonderie
+              </Button>
             </div>
-            {splitLigne && splitQty > 0 && splitQty < splitLigne.quantite && (
-              <p className="text-xs text-muted-foreground">
-                → {splitQty} servi{splitQty > 1 ? "s" : ""} depuis le stock, {splitLigne.quantite - splitQty} à commander
-              </p>
-            )}
+
+            {/* Total indicator */}
+            <div className={`flex items-center justify-between text-sm pt-2 border-t ${dialogTotal === dialogMax ? "text-emerald-600" : dialogTotal > dialogMax ? "text-red-500" : "text-muted-foreground"}`}>
+              <span>Total dispatché</span>
+              <span className="font-bold">{dialogTotal} / {dialogMax}</span>
+            </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setSplitLigne(null)}>
+            <Button variant="outline" size="sm" onClick={() => setDialogLigne(null)}>
               Annuler
             </Button>
-            <Button
-              size="sm"
-              disabled={!splitQty || splitQty <= 0 || loading !== null}
-              onClick={handleSplitConfirm}
-            >
+            <Button size="sm" disabled={!dialogValid} onClick={confirmDispatchDialog}>
+              <ArrowsLeftRight size={14} weight="duotone" />
               Confirmer
             </Button>
           </DialogFooter>

@@ -36,7 +36,9 @@ export function ReferenceEditForm({ reference, onClose }: ReferenceEditFormProps
   const [designation, setDesignation] = useState(reference.designation);
   const [metal, setMetal] = useState(reference.metal ?? "");
   const [qualite, setQualite] = useState(reference.qualite ?? "");
-  const [poids, setPoids] = useState(reference.poids?.toString() ?? "");
+  const [poidsBrut, setPoidsBrut] = useState(reference.poids_brut?.toString() ?? reference.poids?.toString() ?? "");
+  const [poidsNet, setPoidsNet] = useState(reference.poids_net?.toString() ?? reference.poids?.toString() ?? "");
+  const [poidsNetTouched, setPoidsNetTouched] = useState(false);
   const [quantite, setQuantite] = useState(reference.quantite.toString());
   const [typeRachat, setTypeRachat] = useState<"direct" | "devis">(reference.type_rachat);
 
@@ -57,7 +59,9 @@ export function ReferenceEditForm({ reference, onClose }: ReferenceEditFormProps
         designation,
         metal: metal || null,
         qualite: qualite || null,
-        poids: poids ? parseFloat(poids) : null,
+        poids: poidsNet ? parseFloat(poidsNet) : null,
+        poids_brut: poidsBrut ? parseFloat(poidsBrut) : null,
+        poids_net: poidsNet ? parseFloat(poidsNet) : null,
         quantite: parseInt(quantite) || 1,
         type_rachat: typeRachat,
         updated_at: new Date().toISOString(),
@@ -164,16 +168,36 @@ export function ReferenceEditForm({ reference, onClose }: ReferenceEditFormProps
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {isBijoux && (
-              <div className="space-y-2">
-                <Label>Poids (g)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={poids}
-                  onChange={(e) => setPoids(e.target.value)}
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label>Poids brut (g)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={poidsBrut}
+                    onChange={(e) => {
+                      setPoidsBrut(e.target.value);
+                      if (!poidsNetTouched) setPoidsNet(e.target.value);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Poids net (g)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={poidsBrut || undefined}
+                    value={poidsNet}
+                    onChange={(e) => {
+                      setPoidsNet(e.target.value);
+                      setPoidsNetTouched(true);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">Poids du métal seul</p>
+                </div>
+              </>
             )}
             <div className="space-y-2">
               <Label>Quantité</Label>

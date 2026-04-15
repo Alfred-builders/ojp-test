@@ -8,6 +8,7 @@ import {
   NotePencil as PhNotePencil,
   User as PhUser,
   FloppyDisk,
+  Plus,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/card";
 import { Header } from "@/components/dashboard/header";
 import { dossierSchema } from "@/lib/validations/dossier";
+import { ClientCreateDialog } from "@/components/clients/client-create-dialog";
 import type { Client } from "@/types/client";
 
 function FormField({
@@ -55,13 +57,20 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
   const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [clients, setClients] = useState(validClients);
+  const [showClientCreate, setShowClientCreate] = useState(false);
 
   const paramClientId = searchParams.get("client_id") ?? "";
-  const isParamValid = validClients.some((c) => c.id === paramClientId);
+  const isParamValid = clients.some((c) => c.id === paramClientId);
   const [clientId, setClientId] = useState(isParamValid ? paramClientId : "");
   const [notes, setNotes] = useState("");
 
-  const selectedClient = validClients.find((c) => c.id === clientId) ?? null;
+  const selectedClient = clients.find((c) => c.id === clientId) ?? null;
+
+  function handleClientCreated(newClient: Client) {
+    setClients((prev) => [...prev, newClient]);
+    setClientId(newClient.id);
+  }
 
   async function handleCreate() {
     const formData = {
@@ -169,12 +178,25 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
                       : <SelectValue placeholder="Sélectionner un client" />}
                   </SelectTrigger>
                   <SelectContent>
-                    {validClients.length === 0 ? (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowClientCreate(true);
+                      }}
+                    >
+                      <Plus size={14} weight="bold" />
+                      Nouveau client
+                    </button>
+                    <div className="my-1 h-px bg-border" />
+                    {clients.length === 0 ? (
                       <div className="px-2 py-4 text-center text-sm text-muted-foreground">
                         Aucun client valide disponible.
                       </div>
                     ) : (
-                      validClients.map((client) => {
+                      clients.map((client) => {
                         const name = `${client.civility === "M" ? "M." : "Mme"} ${client.first_name} ${client.last_name}`;
                         return (
                           <SelectItem key={client.id} value={client.id}>
@@ -227,6 +249,11 @@ export function DossierCreatePage({ validClients }: { validClients: Client[] }) 
           </Card>
         </div>
       </div>
+      <ClientCreateDialog
+        open={showClientCreate}
+        onOpenChange={setShowClientCreate}
+        onClientCreated={handleClientCreated}
+      />
     </>
   );
 }

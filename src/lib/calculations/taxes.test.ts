@@ -1,9 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   calculerTMP,
+  calculerTFOP,
+  calculerTVAMarge,
   isTPVEligible,
   calculerTPV,
   regimeFiscalOptimal,
+  regimeFiscalOptimalBijoux,
 } from "./taxes";
 
 // ============================================================
@@ -34,6 +37,68 @@ describe("calculerTMP", () => {
 
   it("retourne 0 pour un montant négatif", () => {
     expect(calculerTMP(-500)).toBe(0);
+  });
+});
+
+// ============================================================
+// calculerTFOP
+// ============================================================
+describe("calculerTFOP", () => {
+  it("retourne 0 pour un montant ≤ 5000 €", () => {
+    expect(calculerTFOP(5000)).toBe(0);
+    expect(calculerTFOP(4999.99)).toBe(0);
+    expect(calculerTFOP(1000)).toBe(0);
+    expect(calculerTFOP(0)).toBe(0);
+  });
+
+  it("calcule 6.5% au-dessus de 5000 €", () => {
+    // 7000 * 0.065 = 455
+    expect(calculerTFOP(7000)).toBe(455);
+    // 10000 * 0.065 = 650
+    expect(calculerTFOP(10000)).toBe(650);
+  });
+
+  it("arrondit à 2 décimales", () => {
+    // 5001 * 0.065 = 325.065 → 325.07
+    expect(calculerTFOP(5001)).toBe(325.07);
+  });
+
+  it("retourne 0 pour NaN, Infinity, négatif", () => {
+    expect(calculerTFOP(NaN)).toBe(0);
+    expect(calculerTFOP(Infinity)).toBe(0);
+    expect(calculerTFOP(-500)).toBe(0);
+  });
+});
+
+// ============================================================
+// calculerTVAMarge
+// ============================================================
+describe("calculerTVAMarge", () => {
+  it("calcule 20% sur la marge positive", () => {
+    // marge = 9000 - 7000 = 2000, TVA = 400
+    expect(calculerTVAMarge(9000, 7000)).toBe(400);
+  });
+
+  it("retourne 0 si pas de marge", () => {
+    expect(calculerTVAMarge(7000, 7000)).toBe(0);
+    expect(calculerTVAMarge(5000, 7000)).toBe(0);
+  });
+
+  it("arrondit à 2 décimales", () => {
+    // marge = 100.50, TVA = 20.10
+    expect(calculerTVAMarge(7100.50, 7000)).toBe(20.1);
+  });
+
+  it("retourne 0 quand prixVente est NaN, Infinity ou négatif", () => {
+    expect(calculerTVAMarge(NaN, 7000)).toBe(0);
+    expect(calculerTVAMarge(Infinity, 7000)).toBe(0);
+    expect(calculerTVAMarge(-1000, 7000)).toBe(0);
+  });
+
+  it("traite prixAchat NaN/négatif comme 0 (marge = prixVente entier)", () => {
+    // safeNum(NaN) = 0, donc marge = 9000 - 0 = 9000, TVA = 1800
+    expect(calculerTVAMarge(9000, NaN)).toBe(1800);
+    expect(calculerTVAMarge(9000, -1000)).toBe(1800);
   });
 });
 
@@ -147,5 +212,28 @@ describe("regimeFiscalOptimal", () => {
 
   it("choisit TMP quand TPV est null", () => {
     expect(regimeFiscalOptimal(null, 150)).toEqual({ regime: "TMP", montant: 150 });
+  });
+});
+
+// ============================================================
+// regimeFiscalOptimalBijoux
+// ============================================================
+describe("regimeFiscalOptimalBijoux", () => {
+  it("choisit TPV quand c'est moins cher que TFOP", () => {
+    expect(regimeFiscalOptimalBijoux(100, 200)).toEqual({ regime: "TPV", montant: 100 });
+  });
+
+  it("choisit TFOP quand c'est moins cher ou égal", () => {
+    expect(regimeFiscalOptimalBijoux(200, 100)).toEqual({ regime: "TFOP", montant: 100 });
+    expect(regimeFiscalOptimalBijoux(100, 100)).toEqual({ regime: "TFOP", montant: 100 });
+  });
+
+  it("choisit TFOP quand TPV est null", () => {
+    expect(regimeFiscalOptimalBijoux(null, 150)).toEqual({ regime: "TFOP", montant: 150 });
+  });
+
+  it("retourne TFOP = 0 si sous le seuil 5000 €", () => {
+    // Si TFOP = 0 (sous seuil), et TPV est null → montant = 0
+    expect(regimeFiscalOptimalBijoux(null, 0)).toEqual({ regime: "TFOP", montant: 0 });
   });
 });

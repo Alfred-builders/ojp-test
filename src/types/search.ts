@@ -5,6 +5,7 @@ export interface SearchResult {
     | "lot"
     | "vente"
     | "bijoux"
+    | "confie_achat"
     | "or_investissement";
   id: string;
   title: string;
@@ -18,5 +19,6 @@ export const ENTITY_LABELS: Record<SearchResult["entity_type"], string> = {
   lot: "Rachat",
   vente: "Ventes",
   bijoux: "Bijoux",
+  confie_achat: "Confié d'achat",
   or_investissement: "Or Investissement",
 };

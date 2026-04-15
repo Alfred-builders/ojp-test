@@ -2,12 +2,25 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { FloppyDisk, X, Diamond, Lightning, FileText } from "@phosphor-icons/react";
+import {
+  FloppyDisk,
+  X,
+  Diamond,
+  Lightning,
+  FileText,
+  Info,
+  CurrencyEur,
+  Receipt,
+  Wallet,
+} from "@phosphor-icons/react";
+import { parse } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -26,7 +39,13 @@ import {
   calculerPrixRachatBijoux,
   getCoursMetalFromSnapshot,
 } from "@/lib/calculations/prix-rachat";
-import { formatCurrency } from "@/lib/format";
+import {
+  calculerTFOP,
+  calculerTPV,
+  isTPVEligible,
+  regimeFiscalOptimalBijoux,
+} from "@/lib/calculations/taxes";
+import { formatCurrency, formatDateISO } from "@/lib/format";
 import type { LotReference } from "@/types/lot";
 
 interface ReferenceFormBijouxProps {
@@ -64,13 +83,22 @@ export function ReferenceFormBijoux({
   const [designation, setDesignation] = useState(editData?.designation ?? "");
   const [metal, setMetal] = useState<"Or" | "Argent" | "Platine" | "">(editData?.metal ?? "");
   const [qualite, setQualite] = useState(editData?.qualite ?? "");
-  const [poids, setPoids] = useState(editData?.poids?.toString() ?? "");
+  const [poidsBrut, setPoidsBrut] = useState(editData?.poids_brut?.toString() ?? editData?.poids?.toString() ?? "");
+  const [poidsNet, setPoidsNet] = useState(editData?.poids_net?.toString() ?? editData?.poids?.toString() ?? "");
+  const [poidsNetTouched, setPoidsNetTouched] = useState(false);
   const [quantite, setQuantite] = useState(editData?.quantite?.toString() ?? "1");
   const [prixAchatManuel, setPrixAchatManuel] = useState(editData?.prix_achat?.toString() ?? "");
   const [prixReventeManuel, setPrixReventeManuel] = useState(editData?.prix_revente_estime?.toString() ?? "");
+  const [commissionLocal, setCommissionLocal] = useState(commissionDvPct.toString());
+
+  // Champs fiscaux (rachat uniquement)
+  const [hasFacture, setHasFacture] = useState(editData?.has_facture ?? false);
+  const [isScelle, setIsScelle] = useState(editData?.is_scelle ?? false);
+  const [dateAcquisition, setDateAcquisition] = useState(editData?.date_acquisition ?? "");
+  const [prixAcquisitionStr, setPrixAcquisitionStr] = useState(editData?.prix_acquisition?.toString() ?? "");
 
   const prixCalcule = useMemo(() => {
-    if (!metal || !qualite || !poids) return null;
+    if (!metal || !qualite || !poidsNet) return null;
     const coursMetalGramme = getCoursMetalFromSnapshot(
       metal as "Or" | "Argent" | "Platine",
       coursOrSnapshot,
@@ -80,20 +108,21 @@ export function ReferenceFormBijoux({
     return calculerPrixRachatBijoux(
       coursMetalGramme,
       parseInt(qualite),
-      parseFloat(poids),
+      parseFloat(poidsNet),
       coefficientSnapshot
     );
-  }, [metal, qualite, poids, coursOrSnapshot, coursArgentSnapshot, coursPlatineSnapshot, coefficientSnapshot]);
+  }, [metal, qualite, poidsNet, coursOrSnapshot, coursArgentSnapshot, coursPlatineSnapshot, coefficientSnapshot]);
+
+  const commissionPct = parseFloat(commissionLocal) || commissionDvPct;
 
   const prixVenteCalcule = useMemo(() => {
     if (isDepotVente) {
-      // Depot-vente: prix_revente = prix_achat × (1 + commission%)
       const basePrix = prixAchatManuel ? parseFloat(prixAchatManuel) : prixCalcule;
       if (basePrix === null || isNaN(basePrix)) return null;
-      const markup = 1 + commissionDvPct / 100;
+      const markup = 1 + commissionPct / 100;
       return Math.round(basePrix * markup * 100) / 100;
     }
-    if (!metal || !qualite || !poids) return null;
+    if (!metal || !qualite || !poidsNet) return null;
     const coursMetalGramme = getCoursMetalFromSnapshot(
       metal as "Or" | "Argent" | "Platine",
       coursOrSnapshot,
@@ -103,27 +132,56 @@ export function ReferenceFormBijoux({
     return calculerPrixRachatBijoux(
       coursMetalGramme,
       parseInt(qualite),
-      parseFloat(poids),
+      parseFloat(poidsNet),
       coefficientVenteSnapshot
     );
-  }, [metal, qualite, poids, coursOrSnapshot, coursArgentSnapshot, coursPlatineSnapshot, coefficientVenteSnapshot, isDepotVente, prixAchatManuel, prixCalcule, commissionDvPct]);
+  }, [metal, qualite, poidsNet, coursOrSnapshot, coursArgentSnapshot, coursPlatineSnapshot, coefficientVenteSnapshot, isDepotVente, prixAchatManuel, prixCalcule, commissionPct]);
+
+  // --- Calculs fiscaux (rachat uniquement) ---
+  const qty = parseInt(quantite) || 1;
+  const prixAchatTotal = (() => {
+    const unitaire = prixAchatManuel ? parseFloat(prixAchatManuel) : prixCalcule;
+    if (unitaire === null || isNaN(unitaire)) return null;
+    return Math.round(unitaire * qty * 100) / 100;
+  })();
+
+  const tpvEligible = !isDepotVente && isTPVEligible(
+    hasFacture,
+    isScelle,
+    dateAcquisition || null,
+    prixAcquisitionStr ? parseFloat(prixAcquisitionStr) : null
+  );
+
+  const tfopMontant = !isDepotVente && prixAchatTotal !== null ? calculerTFOP(prixAchatTotal) : null;
+  const tpvMontant = tpvEligible && prixAchatTotal !== null && prixAcquisitionStr
+    ? calculerTPV(prixAchatTotal, parseFloat(prixAcquisitionStr), dateAcquisition)
+    : null;
+
+  const optimal = !isDepotVente && tfopMontant !== null
+    ? regimeFiscalOptimalBijoux(tpvMontant, tfopMontant)
+    : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (!designation || !metal || !qualite || !poids) {
-      setError("Tous les champs sont requis.");
+    if (!designation || !metal || !qualite || !poidsBrut || !poidsNet || !quantite) {
+      setError("Désignation, métal, qualité, poids brut, poids net et quantité sont requis.");
       return;
     }
 
     const finalPrixAchat = prixAchatManuel ? parseFloat(prixAchatManuel) : prixCalcule;
     const finalPrixRevente = isDepotVente
-      ? (finalPrixAchat !== null && !isNaN(finalPrixAchat) ? Math.round(finalPrixAchat * 1.4 * 100) / 100 : null)
+      ? (finalPrixAchat !== null && !isNaN(finalPrixAchat) ? Math.round(finalPrixAchat * (1 + commissionPct / 100) * 100) / 100 : null)
       : (prixReventeManuel ? parseFloat(prixReventeManuel) : prixVenteCalcule);
 
     if (finalPrixAchat === null || isNaN(finalPrixAchat)) {
       setError("Le prix de rachat est requis.");
+      return;
+    }
+
+    if (!isDepotVente && (finalPrixRevente === null || isNaN(finalPrixRevente))) {
+      setError("Le prix de revente est requis.");
       return;
     }
 
@@ -140,13 +198,25 @@ export function ReferenceFormBijoux({
       designation,
       metal,
       qualite,
-      poids: parseFloat(poids),
+      poids: parseFloat(poidsNet),
+      poids_brut: parseFloat(poidsBrut),
+      poids_net: parseFloat(poidsNet),
       quantite: parseInt(quantite) || 1,
       cours_metal_utilise: coursMetalGramme,
       coefficient_utilise: coefficientSnapshot,
       prix_achat: finalPrixAchat,
       prix_revente_estime: finalPrixRevente,
       type_rachat: typeRachat,
+      // Champs fiscaux
+      has_facture: isDepotVente ? false : hasFacture,
+      is_scelle: isDepotVente ? false : isScelle,
+      date_acquisition: isDepotVente ? null : (dateAcquisition || null),
+      prix_acquisition: isDepotVente ? null : (prixAcquisitionStr ? parseFloat(prixAcquisitionStr) : null),
+      tpv_eligible: isDepotVente ? false : tpvEligible,
+      tpv_montant: isDepotVente ? null : (tpvMontant !== null ? tpvMontant / qty : null),
+      tmp_montant: isDepotVente ? null : (tfopMontant !== null ? tfopMontant / qty : null),
+      regime_fiscal: isDepotVente ? null : (optimal?.regime ?? null),
+      montant_taxe: isDepotVente ? 0 : ((optimal?.montant ?? 0) / qty),
     };
 
     const { error: dbError } = isEdit
@@ -171,7 +241,7 @@ export function ReferenceFormBijoux({
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Diamond size={16} weight="duotone" />
-          {isEdit ? `Modifier — ${editData.designation}` : "Ajouter un bijou"}
+          {isEdit ? `Modifier — ${editData.designation}` : "Ajouter un bijoux"}
         </CardTitle>
         <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Fermer">
           <X size={14} weight="regular" />
@@ -212,7 +282,7 @@ export function ReferenceFormBijoux({
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="designation">Désignation</Label>
+              <Label htmlFor="designation">Désignation *</Label>
               <Input
                 id="designation"
                 value={designation}
@@ -222,7 +292,7 @@ export function ReferenceFormBijoux({
               />
             </div>
             <div className="space-y-2">
-              <Label>Métal</Label>
+              <Label>Métal *</Label>
               <Select value={metal} onValueChange={(v) => { if (v) setMetal(v as "Or" | "Argent" | "Platine"); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner" />
@@ -237,7 +307,7 @@ export function ReferenceFormBijoux({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Qualité</Label>
+              <Label>Qualité *</Label>
               <Select value={qualite} onValueChange={(v) => { if (v) setQualite(v); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner" />
@@ -253,21 +323,41 @@ export function ReferenceFormBijoux({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
             <div className="space-y-2">
-              <Label htmlFor="poids">Poids (g)</Label>
+              <Label htmlFor="poids_brut">Poids brut (g) *</Label>
               <Input
-                id="poids"
+                id="poids_brut"
                 type="number"
                 step="0.01"
                 min="0.01"
-                value={poids}
-                onChange={(e) => setPoids(e.target.value)}
+                value={poidsBrut}
+                onChange={(e) => {
+                  setPoidsBrut(e.target.value);
+                  if (!poidsNetTouched) setPoidsNet(e.target.value);
+                }}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="quantite">Quantité</Label>
+              <Label htmlFor="poids_net">Poids net (g) *</Label>
+              <Input
+                id="poids_net"
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={poidsBrut || undefined}
+                value={poidsNet}
+                onChange={(e) => {
+                  setPoidsNet(e.target.value);
+                  setPoidsNetTouched(true);
+                }}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Poids du métal seul</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quantite">Quantité *</Label>
               <Input
                 id="quantite"
                 type="number"
@@ -275,10 +365,11 @@ export function ReferenceFormBijoux({
                 min="1"
                 value={quantite}
                 onChange={(e) => setQuantite(e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="prix_achat">Prix de rachat</Label>
+              <Label htmlFor="prix_achat">Prix de rachat *</Label>
               <Input
                 id="prix_achat"
                 type="number"
@@ -294,31 +385,141 @@ export function ReferenceFormBijoux({
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="prix_revente">Prix de revente</Label>
-              <Input
-                id="prix_revente"
-                type="number"
-                step="0.01"
-                min="0"
-                value={isDepotVente ? "" : prixReventeManuel}
-                onChange={(e) => setPrixReventeManuel(e.target.value)}
-                placeholder={prixVenteCalcule !== null ? formatCurrency(prixVenteCalcule) : "—"}
-                readOnly={isDepotVente}
-                className={isDepotVente ? "bg-muted" : ""}
-              />
-              {isDepotVente && prixVenteCalcule !== null && !isNaN(prixVenteCalcule) && (
-                <p className="text-xs text-cyan-600 dark:text-cyan-400">
-                  Commission 40% : {formatCurrency(prixVenteCalcule - (prixAchatManuel ? parseFloat(prixAchatManuel) : (prixCalcule ?? 0)))}
+            {isDepotVente ? (
+              <div className="space-y-2">
+                <Label htmlFor="commission">Commission (%)</Label>
+                <Input
+                  id="commission"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={commissionLocal}
+                  onChange={(e) => setCommissionLocal(e.target.value)}
+                />
+                {prixVenteCalcule !== null && !isNaN(prixVenteCalcule) && (
+                  <p className="text-xs text-muted-foreground">
+                    Prix de revente : {formatCurrency(prixVenteCalcule)} (commission : {formatCurrency(prixVenteCalcule - (prixAchatManuel ? parseFloat(prixAchatManuel) : (prixCalcule ?? 0)))})
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="prix_revente">Prix de revente *</Label>
+                <Input
+                  id="prix_revente"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={prixReventeManuel}
+                  onChange={(e) => setPrixReventeManuel(e.target.value)}
+                  placeholder={prixVenteCalcule !== null ? formatCurrency(prixVenteCalcule) : "—"}
+                />
+                {prixVenteCalcule !== null && !isNaN(prixVenteCalcule) && (
+                  <p className="text-xs text-muted-foreground">
+                    Au cours : {formatCurrency(prixVenteCalcule)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Conditions fiscales (rachat uniquement) */}
+          {!isDepotVente && (
+            <div className="space-y-3 rounded-lg border p-4">
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                <Info size={14} weight="duotone" />
+                Conditions fiscales — TFOP (6,5%)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Taxe forfaitaire sur les objets précieux : 6% + 0,5% CRDS. Exonéré si cession ≤ 5 000 €.
+                Le vendeur peut opter pour le régime des plus-values s&apos;il dispose des justificatifs.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={hasFacture} onCheckedChange={(v) => setHasFacture(!!v)} />
+                  Facture au nom du client
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={isScelle} onCheckedChange={(v) => setIsScelle(!!v)} />
+                  Justificatif d&apos;achat
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date d&apos;acquisition</Label>
+                  <DatePicker
+                    value={dateAcquisition ? parse(dateAcquisition, "yyyy-MM-dd", new Date()) : undefined}
+                    onChange={(d) => setDateAcquisition(d ? formatDateISO(d) : "")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="prix_acquisition_bijoux">Prix d&apos;acquisition (€)</Label>
+                  <Input
+                    id="prix_acquisition_bijoux"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={prixAcquisitionStr}
+                    onChange={(e) => setPrixAcquisitionStr(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Résultats fiscaux */}
+          {!isDepotVente && prixAchatTotal !== null && (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <CurrencyEur size={12} weight="duotone" />
+                  Prix de rachat total
                 </p>
-              )}
-              {!isDepotVente && prixVenteCalcule !== null && !isNaN(prixVenteCalcule) && (
-                <p className="text-xs text-muted-foreground">
-                  Au cours : {formatCurrency(prixVenteCalcule)}
+                <p className="text-lg font-bold text-foreground">
+                  {formatCurrency(prixAchatTotal)}
                 </p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Receipt size={12} weight="duotone" />
+                  TFOP (6,5%)
+                </p>
+                <p className={`text-sm font-medium ${optimal?.regime === "TFOP" ? "text-emerald-600" : "text-muted-foreground"}`}>
+                  {tfopMontant !== null ? (tfopMontant === 0 ? "Exonéré (≤ 5 000 €)" : formatCurrency(tfopMontant)) : "—"}
+                  {optimal?.regime === "TFOP" && tfopMontant !== null && tfopMontant > 0 && " \u2713"}
+                </p>
+                {tpvEligible && tpvMontant !== null ? (
+                  <>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
+                      <Receipt size={12} weight="duotone" />
+                      TPV (plus-value)
+                    </p>
+                    <p className={`text-sm font-medium ${optimal?.regime === "TPV" ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {formatCurrency(tpvMontant)}
+                      {optimal?.regime === "TPV" && " \u2713"}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground mt-2">TPV</p>
+                    <p className="text-sm text-muted-foreground">Non éligible</p>
+                  </>
+                )}
+              </div>
+              {optimal && (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Wallet size={12} weight="duotone" />
+                    Montant net
+                  </p>
+                  <p className="text-lg font-bold">
+                    {formatCurrency(prixAchatTotal - optimal.montant)}
+                  </p>
+                </div>
               )}
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose}>

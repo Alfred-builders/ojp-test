@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CopyableText } from "@/components/ui/copyable-text";
 import Link from "next/link";
 import { PreviewLink } from "@/components/preview/preview-link";
@@ -20,6 +20,7 @@ import {
   Timer,
   WarningCircle,
   ClipboardText,
+  Receipt,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -49,9 +50,9 @@ import { OrInvestPickerForm } from "@/components/ventes/or-invest-picker-form";
 import { ReglementsCard } from "@/components/reglements/reglements-card";
 import { detectPaymentsDue } from "@/lib/reglements/detect-payments-due";
 import { getSettingClient } from "@/lib/settings-client";
-import type { LotWithVenteLignes } from "@/types/lot";
+import type { LotWithVenteLignes, LotStatus } from "@/types/lot";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/format";
-import type { VenteStatus, Facture } from "@/types/vente";
+import type { Facture } from "@/types/vente";
 import type { Fonderie } from "@/types/fonderie";
 import type { Reglement } from "@/types/reglement";
 import type { BonCommande } from "@/types/bon-commande";
@@ -92,15 +93,46 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
   const [saving, setSaving] = useState(false);
   const [acomptePct, setAcomptePct] = useState(10);
 
+  // Track latest values in refs for cleanup on navigation away
+  const lignesCountRef = useRef(lot.lignes.length);
+  const statusRef = useRef(lot.status);
+  useEffect(() => {
+    lignesCountRef.current = lot.lignes.length;
+    statusRef.current = lot.status;
+  });
+
+  // Auto-delete empty brouillon lot when navigating away (not on strict-mode remount)
+  useEffect(() => {
+    const lotId = lot.id;
+
+    function cleanupIfEmpty() {
+      if (statusRef.current === "brouillon" && lignesCountRef.current === 0) {
+        const sb = createClient();
+        sb.from("lots").delete().eq("id", lotId).then(() => {});
+      }
+    }
+
+    const handleBeforeUnload = () => cleanupIfEmpty();
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    const handlePopState = () => cleanupIfEmpty();
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [lot.id]);
+
   useEffect(() => {
     getSettingClient("business_rules").then((rules) => {
       if (rules) setAcomptePct(rules.acompte_pct);
     });
   }, []);
 
-  const status = lot.status as VenteStatus;
+  const status = lot.status as LotStatus;
   const isBrouillon = status === "brouillon";
-  const isTerminal = status === "termine" || status === "annule";
+  const isTerminal = status === "finalise";
   const clientName = `${lot.dossier.client.civility === "M" ? "M." : "Mme"} ${lot.dossier.client.first_name} ${lot.dossier.client.last_name}`;
 
   const existingStockIds = lot.lignes
@@ -320,7 +352,7 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
           hasOrInvest={hasOrInvest}
           worstFulfillment={worstFulfillment}
           allLivre={allLivre}
-          isError={status === "annule"}
+          isError={lot.outcome === "annule"}
         />
 
         {/* Facture */}
@@ -350,10 +382,10 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
               Articles ({lot.lignes.length})
             </CardTitle>
             {!isBrouillon && hasOrInvest && (
-              <Link href="/commandes">
+              <Link href="/fonderie/routage">
                 <Button variant="outline" size="sm">
                   <ClipboardText size={14} weight="duotone" />
-                  Accéder aux commandes
+                  Accéder au routage
                 </Button>
               </Link>
             )}
@@ -370,7 +402,7 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem onClick={() => { setShowForm(true); setShowFormOrInvest(false); setEditingLigne(null); }}>
                     <Diamond size={16} weight="duotone" />
-                    Bijou
+                    Bijoux
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setShowFormOrInvest(true); setShowForm(false); setEditingLigne(null); }}>
                     <Coins size={16} weight="duotone" />
@@ -427,13 +459,60 @@ export function VenteDetailPage({ lot, facture, orInvestStock = {}, fonderies = 
                 )
               )
             )}
+
+            {/* Récapitulatif prix */}
+            {lot.lignes.length > 0 && (() => {
+              const totalHT = lot.lignes.reduce((sum, l) => sum + l.prix_total, 0);
+              const totalTVAMarge = lot.lignes
+                .filter((l) => l.type_taxe === "tva_marge" || (!l.type_taxe && l.montant_taxe > 0))
+                .reduce((sum, l) => sum + l.montant_taxe, 0);
+              const totalTFOP = lot.lignes
+                .filter((l) => l.type_taxe === "tfop")
+                .reduce((sum, l) => sum + l.montant_taxe, 0);
+              const totalTaxe = totalTVAMarge + totalTFOP;
+              const totalTTC = totalHT + totalTaxe;
+              const taxeLineCount = (totalTVAMarge > 0 ? 1 : 0) + (totalTFOP > 0 ? 1 : 0);
+              return (
+                <div className="rounded-lg border bg-muted/50 px-4 py-3 space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Receipt size={16} weight="duotone" className="text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Récapitulatif</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-foreground">Total articles</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(totalHT)} HT</span>
+                  </div>
+                  {totalTaxe > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {totalTVAMarge > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">TVA sur marge (20 %)</span>
+                          <span className="font-medium text-muted-foreground">+ {formatCurrency(totalTVAMarge)}</span>
+                        </div>
+                      )}
+                      {totalTFOP > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">TFOP (6,5 %)</span>
+                          <span className="font-medium text-muted-foreground">+ {formatCurrency(totalTFOP)}</span>
+                        </div>
+                      )}
+                      <div className="border-t pt-1 mt-1 flex items-center justify-between text-sm">
+                        <span className="font-semibold text-foreground">Total taxes</span>
+                        <span className="font-semibold text-foreground">+ {formatCurrency(totalTaxe)}</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold">Total TTC</span>
+                      <span className="text-lg font-bold">{formatCurrency(totalTTC)} TTC</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
-
-        {/* Terminer la vente — card contextuelle */}
-        {status === "en_cours" && (
-          <VenteStatusActions lot={lot} reglements={reglements} mode="terminer" />
-        )}
 
         {/* Reglements */}
         {status !== "brouillon" && (

@@ -4,25 +4,32 @@ import { generateQuittanceSingleRef } from "./document-operations";
 import type { ActionResult, ActionContext, SupabaseClient } from "./action-types";
 import type { LotReference } from "@/types/lot";
 
+const TERMINAL_REF_STATUSES = ["finalise", "devis_refuse", "retracte", "rendu_client", "vendu"];
+
 /**
  * Check if all references in a lot are terminal, and if so finalize the lot and possibly the dossier.
+ * Determines the outcome based on reference statuses.
  */
-async function checkAndFinalizeLot(supabase: SupabaseClient, lotId: string, dossierId: string): Promise<void> {
+export async function checkAndFinalizeLot(supabase: SupabaseClient, lotId: string, dossierId: string): Promise<void> {
   const { data: refs } = await supabase
     .from("lot_references")
     .select("status")
     .eq("lot_id", lotId);
 
-  const allTerminal = (refs ?? []).every(
-    (r: { status: string }) => r.status === "finalise" || r.status === "devis_refuse" || r.status === "retracte"
-  );
+  const refStatuses = (refs ?? []).map((r: { status: string }) => r.status);
+  const allTerminal = refStatuses.every((s) => TERMINAL_REF_STATUSES.includes(s));
 
   if (!allTerminal) return;
+
+  // Déterminer l'outcome
+  const allRetracte = refStatuses.every((s) => s === "retracte");
+  const allRefuse = refStatuses.every((s) => s === "devis_refuse");
+  const outcome = allRetracte ? "retracte" : allRefuse ? "refuse" : "complete";
 
   await mutate(
     supabase
       .from("lots")
-      .update({ status: "finalise", date_finalisation: new Date().toISOString() })
+      .update({ status: "finalise", outcome, date_finalisation: new Date().toISOString() })
       .eq("id", lotId),
     "Erreur lors de la finalisation du lot"
   );
@@ -34,7 +41,7 @@ async function checkAndFinalizeLot(supabase: SupabaseClient, lotId: string, doss
     .eq("dossier_id", dossierId);
 
   const allDone = (allLots ?? []).every(
-    (l: { status: string }) => l.status === "finalise" || l.status === "termine"
+    (l: { status: string }) => l.status === "finalise"
   );
 
   if (allDone) {
@@ -57,7 +64,7 @@ export async function executeValiderRachat(
   refId: string
 ): Promise<ActionResult> {
   const ref = ctx.lot.references.find((r) => r.id === refId);
-  if (!ref || ref.categorie !== "bijoux") return { success: false, error: "Reference non trouvee" };
+  if (!ref || ref.categorie !== "bijoux") return { success: false, error: "Référence non trouvée" };
 
   const { error: stockErr } = await createBijouxStockEntry({
     supabase,
@@ -67,13 +74,13 @@ export async function executeValiderRachat(
   });
   if (stockErr) return { success: false };
 
-  // Mark as finalized (stock-operations already set route_stock, override to finalise)
+  // Mark as finalized (stock-operations already set route_fonderie, override to finalise)
   const { error: e2 } = await mutate(
     supabase
       .from("lot_references")
       .update({ status: "finalise" })
       .eq("id", refId),
-    "Erreur lors de la finalisation de la reference"
+    "Erreur lors de la finalisation de la référence"
   );
   if (e2) return { success: false };
 
@@ -96,7 +103,7 @@ export async function executeRetracterRef(
       .from("lot_references")
       .update({ status: "retracte" })
       .eq("id", refId),
-    "Erreur lors de la retractation de la reference"
+    "Erreur lors de la rétractation de la référence"
   );
   if (error) return { success: false };
 
@@ -115,18 +122,16 @@ export async function executeAccepterDevisRef(
   refId: string
 ): Promise<ActionResult> {
   const ref = ctx.lot.references.find((r) => r.id === refId);
-  if (!ref) return { success: false, error: "Reference non trouvee" };
+  if (!ref) return { success: false, error: "Référence non trouvée" };
 
   if (ref.categorie === "or_investissement" && ref.or_investissement_id) {
-    const { error: stockErr } = await incrementOrInvestStock({ supabase, ref });
-    if (stockErr) return { success: false };
-
+    // En attente de paiement (stock incrémenté après paiement de la quittance)
     const { error: e2 } = await mutate(
       supabase
         .from("lot_references")
-        .update({ status: "finalise" })
+        .update({ status: "en_attente_paiement" })
         .eq("id", refId),
-      "Erreur lors de la finalisation de la reference"
+      "Erreur lors de la mise en attente de paiement de la référence"
     );
     if (e2) return { success: false };
   } else {
@@ -141,7 +146,7 @@ export async function executeAccepterDevisRef(
           date_fin_delai: delai.toISOString(),
         })
         .eq("id", refId),
-      "Erreur lors de la mise en retractation de la reference"
+      "Erreur lors de la mise en rétractation de la référence"
     );
     if (e3) return { success: false };
   }
@@ -172,15 +177,19 @@ export async function executeRefuserDevisRef(
 }
 
 /**
- * Restitute a depot-vente reference.
+ * Restitute a depot-vente reference, then check if lot can be finalized.
  */
 export async function executeRestituerRef(
   supabase: SupabaseClient,
-  _ctx: ActionContext,
+  ctx: ActionContext,
   refId: string,
   ref: LotReference
 ): Promise<ActionResult> {
   const { error } = await restituerReference({ supabase, ref });
   if (error) return { success: false };
+
+  // Vérifier si toutes les refs du lot sont terminées (vendues ou rendues)
+  await checkAndFinalizeLot(supabase, ctx.lot.id, ctx.dossier.id);
+
   return { success: true };
 }

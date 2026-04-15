@@ -1,6 +1,12 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { autoProcessExpiredRetractation } from "@/lib/actions/finalize-actions";
 import { LotDetailPage } from "@/components/lots/lot-detail-page";
+
+const cachedAutoProcess = cache(async (dossierId: string) => {
+  await autoProcessExpiredRetractation(dossierId);
+});
 import type { LotWithReferences, LotReference } from "@/types/lot";
 import type { DocumentRecord } from "@/types/document";
 import type { Reglement } from "@/types/reglement";
@@ -17,6 +23,9 @@ export default async function LotPage({ params }: { params: Promise<{ id: string
 
   if (!lot) return notFound();
 
+  // Auto-process expired retractation before rendering (cached to prevent double-execution)
+  await cachedAutoProcess(lot.dossier_id);
+
   const { data: references } = await supabase
     .from("lot_references")
     .select("*")
@@ -32,7 +41,7 @@ export default async function LotPage({ params }: { params: Promise<{ id: string
   // Fetch documents for this lot
   const { data: documents } = await supabase
     .from("documents")
-    .select("*")
+    .select("*, document_references(id, document_id, lot_reference_id)")
     .eq("lot_id", id)
     .order("created_at", { ascending: false });
 

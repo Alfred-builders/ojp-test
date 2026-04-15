@@ -17,6 +17,8 @@ interface RefData {
   metal: string | null;
   qualite: string | null;
   poids: number | null;
+  poids_brut: number | null;
+  poids_net: number | null;
   quantite: number;
   prix_achat: number;
   prix_revente_estime: number | null;
@@ -102,7 +104,9 @@ export default function ReferencePreview({ id }: { id: string }) {
         <PreviewRow label="Catégorie" value={ref.categorie === "bijoux" ? "Bijoux" : "Or investissement"} />
         {ref.metal && <PreviewRow label="Métal" value={ref.metal} />}
         {ref.qualite && <PreviewRow label="Titrage" value={ref.qualite} />}
-        {ref.poids && <PreviewRow label="Poids" value={`${ref.poids}g`} />}
+        {ref.poids_brut != null && <PreviewRow label="Poids brut" value={`${ref.poids_brut}g`} />}
+        {ref.poids_net != null && <PreviewRow label="Poids net" value={`${ref.poids_net}g`} />}
+        {ref.poids_brut == null && ref.poids != null && <PreviewRow label="Poids" value={`${ref.poids}g`} />}
         <PreviewRow label="Quantité" value={`×${ref.quantite}`} />
         <PreviewRow label="Prix d'achat" value={`${formatCurrency(ref.prix_achat)}/u`} />
         <PreviewRow label="Total" value={formatCurrency(ref.prix_achat * ref.quantite)} />
